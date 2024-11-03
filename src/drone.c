@@ -2,18 +2,12 @@
 #include <math.h>
 #include <time.h>
 #include <unistd.h>
-
-#define MASS 1.0             // Drone mass in kg
-#define DAMPING 1.0          // Damping coefficient
-#define TIME_STEP 0.1        // Time step for simulation (100 ms)
-#define REPULSION_RADIUS 5.0 // Max distance for obstacle repulsion
-#define ETA 10.0             // Strength of the repulsive force
-
-typedef struct
-{
-    float x, y;   // Position
-    float vx, vy; // Velocity
-} Drone;
+#include <stdlib.h>
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <types.h>
+#include <constants.h>
 
 void update_drone_position(Drone *drone, float fx, float fy)
 {
@@ -26,11 +20,11 @@ void update_drone_position(Drone *drone, float fx, float fy)
     drone->y += drone->vy * TIME_STEP;
 }
 
-float calculate_repulsive_force(float obstacle_x, float obstacle_y, float drone_x, float drone_y)
+float calculate_repulsive_force(Object *obstacle, Drone *drone)
 {
     // Calculate distance to obstacle
-    float dx = drone_x - obstacle_x;
-    float dy = drone_y - obstacle_y;
+    float dx = drone->x - obstacle->x;
+    float dy = drone->y - obstacle->y;
     float distance = sqrt(dx * dx + dy * dy);
 
     // Apply repulsion only within a certain radius
@@ -44,26 +38,45 @@ float calculate_repulsive_force(float obstacle_x, float obstacle_y, float drone_
 
 int main()
 {
-    Drone drone = {0.0, 0.0, 0.0, 0.0}; // Initialize drone at origin with zero velocity
+    int COLS, LINES;
+    // Get terminal size
+    if (read(STDIN_FILENO, &COLS, sizeof(int)) <= 0)
+        exit(1);
+    if (read(STDIN_FILENO, &LINES, sizeof(int)) <= 0)
+        exit(1);
 
-    float force_x = 0.0, force_y = 0.0;
+    Drone drone = {0.0, 0.0, 0.0, 0.0};      // Initialize drone at origin with zero velocity
+    Input input = {0, 0, 0, 0};              // Initialize input commands
+    Object obstacle = {COLS / 3, LINES / 3}; // Place obstacle at a fixed point
 
-    // Simulate pressing the "up" key (apply upward force)
-    float command_force = 1.0; // Force magnitude for key press
-    force_y += command_force;
+    while (1)
+    {
+        // Read control forces from the pipe (e.g., from blackboard server)
+        if (read(STDIN_FILENO, &input, sizeof(Input)) <= 0)
+            break;
 
-    // Obstacle at (3, 3) coordinates
-    float obstacle_x = 3.0;
-    float obstacle_y = 3.0;
+        // convert input into control forces
+        float force_x = 0.0, force_y = 0.0;
+        if (input.n)
+            force_y -= COMMAND_FORCE;
+        if (input.s)
+            force_y += COMMAND_FORCE;
+        if (input.e)
+            force_x += COMMAND_FORCE;
+        if (input.w)
+            force_x -= COMMAND_FORCE;
+        if (input.reset)
+        {
+            drone.vx = 0;
+            drone.vy = 0;
+        }
 
-    for (int t = 0; t < 50; t++)
-    { // Run simulation for 100 steps
         // Calculate repulsive force from obstacle
-        float repulsion_force = calculate_repulsive_force(obstacle_x, obstacle_y, drone.x, drone.y);
+        float repulsion_force = calculate_repulsive_force(&obstacle, &drone);
 
         // Decompose repulsive force into x and y components
-        float dx = drone.x - obstacle_x;
-        float dy = drone.y - obstacle_y;
+        float dx = drone.x - obstacle.x;
+        float dy = drone.y - obstacle.y;
         float distance = sqrt(dx * dx + dy * dy);
         if (distance > 0)
         {
@@ -71,19 +84,18 @@ int main()
             force_y += repulsion_force * (dy / distance);
         }
 
-        // Update drone position based on total forces
+        // Update drone position based on control forces
         update_drone_position(&drone, force_x, force_y);
 
-        // Print the position and velocity of the drone
-        printf("Time: %.1f s, Position: (%.2f, %.2f), Velocity: (%.2f, %.2f)\n",
-               t * TIME_STEP, drone.x, drone.y, drone.vx, drone.vy);
+        // Write updated position and velocity back to the blackboard server
+        write(STDOUT_FILENO, &drone, sizeof(Drone));
 
-        // Reset command force for next iteration (only apply once)
+        // reset force
         force_x = 0.0;
         force_y = 0.0;
 
-        // Wait for the next time step
-        usleep(TIME_STEP * 1000000); // Convert TIME_STEP to microseconds
+        // Simulate time step
+        usleep(TIME_STEP * 500000); // Convert TIME_STEP to microseconds
     }
 
     return 0;

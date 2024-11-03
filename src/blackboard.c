@@ -1,35 +1,12 @@
 #include <ncurses.h>
 #include <unistd.h> // For usleep
 #include <stdlib.h> // For exit
-#include <math.h>
 #include <time.h>
-
-#define DELAY 50000 // Microseconds delay for refresh
-
-#define DRONE "+"
-#define OBSTACLE "*"
-
-#define DRONE_PAIR 1
-#define OBSTACLE_PAIR 2
-#define TARGET_PAIR 3
-
-#define COMMAND_FORCE 10.0	 // Force magnitude for key press
-#define MASS 1.0			 // Drone mass in kg
-#define DAMPING 0.5			 // Damping coefficient
-#define TIME_STEP 0.1		 // Time step for simulation (100 ms)
-#define REPULSION_RADIUS 5.0 // Max distance for obstacle repulsion
-#define ETA 10.0			 // Strength of the repulsive force
-
-typedef struct
-{
-	int x, y;
-} Object;
-
-typedef struct
-{
-	float x, y;	  // Position
-	float vx, vy; // Velocity
-} Drone;
+#include <sys/wait.h>
+#include <fcntl.h>
+#include <sys/types.h>
+#include <types.h>
+#include <constants.h>
 
 void init_colors()
 {
@@ -81,168 +58,148 @@ void display(Drone *drone, Object *obstacle)
 	refresh();
 }
 
-// Function to handle movement based on user input
-void move_drone(Object *drone, int ch)
+void reset_input(Input *input)
 {
-	switch (ch)
-	{
-	case KEY_UP:
-		if (drone->y > 0)
-			drone->y--;
-		break;
-	case KEY_DOWN:
-		if (drone->y < LINES - 1)
-			drone->y++;
-		break;
-	case KEY_LEFT:
-		if (drone->x > 0)
-			drone->x--;
-		break;
-	case KEY_RIGHT:
-		if (drone->x < COLS - 1)
-			drone->x++;
-		break;
-	}
-}
-
-void update_drone_position(Drone *drone, float fx, float fy)
-{
-	// Update velocities based on force and damping
-	drone->vx += (fx - DAMPING * drone->vx) / MASS * TIME_STEP;
-	drone->vy += (fy - DAMPING * drone->vy) / MASS * TIME_STEP;
-
-	// Update positions based on velocity
-	drone->x += drone->vx * TIME_STEP;
-	drone->y += drone->vy * TIME_STEP;
-
-	// check for collision with walls
-	if (drone->x < 0 || drone->x >= COLS || drone->y < 0 || drone->y >= LINES)
-	{
-		// bounce back
-		drone->vx = -drone->vx;
-		drone->vy = -drone->vy;
-	}
-}
-
-float calculate_repulsive_force(Object *obstacle, Drone *drone)
-{
-	// Calculate distance to obstacle
-	float dx = drone->x - obstacle->x;
-	float dy = drone->y - obstacle->y;
-	float distance = sqrt(dx * dx + dy * dy);
-
-	// Apply repulsion only within a certain radius
-	if (distance < REPULSION_RADIUS && distance > 0)
-	{
-		float force_magnitude = ETA * (1.0 / distance - 1.0 / REPULSION_RADIUS) / (distance * distance);
-		return force_magnitude;
-	}
-	return 0.0;
+	input->n = 0;
+	input->e = 0;
+	input->s = 0;
+	input->w = 0;
+	input->reset = 0;
 }
 
 int main()
 {
-	int ch;
-	init_ncurses();
+	int pipe_out[2], pipe_in[2]; // pipes for communication
+	pid_t pid;
 
-	Object obstacle = {COLS / 3, LINES / 3}; // Place obstacle at a fixed point
-
-	Drone drone = {COLS / 2, LINES / 2, 0.0, 0.0}; // Start drone in the center
-	float force_x = 0.0, force_y = 0.0;
-
-	while (1)
+	// Create pipes
+	if (pipe(pipe_out) == -1 || pipe(pipe_in) == -1)
 	{
-		ch = getch(); // Capture user input
-		if (ch == 'q')
-			break; // Exit if 'q' is pressed
-
-		// move_drone(&drone, ch);
-		switch (ch)
-		{
-		// check for W keys
-		case KEY_UP:
-			if (drone.y > 0)
-				drone.y--;
-			break;
-		case KEY_DOWN:
-			if (drone.y < LINES - 1)
-				drone.y++;
-			break;
-		case KEY_LEFT:
-			if (drone.x > 0)
-				drone.x--;
-			break;
-		case KEY_RIGHT:
-			if (drone.x < COLS - 1)
-				drone.x++;
-			break;
-
-		case 'w':
-			force_y -= COMMAND_FORCE;
-			force_x -= COMMAND_FORCE;
-			break;
-		case 'e':
-			force_y -= COMMAND_FORCE;
-			break;
-		case 'r':
-			force_y -= COMMAND_FORCE;
-			force_x += COMMAND_FORCE;
-			break;
-		case 's':
-			force_x -= COMMAND_FORCE;
-			break;
-		case 'd':
-			drone.vx = 0.0;
-			drone.vy = 0.0;
-			break;
-		case 'f':
-			force_x += COMMAND_FORCE;
-			break;
-		case 'x':
-			force_y += COMMAND_FORCE;
-			force_x -= COMMAND_FORCE;
-			break;
-		case 'c':
-			force_y += COMMAND_FORCE;
-			break;
-		case 'v':
-			force_y += COMMAND_FORCE;
-			force_x += COMMAND_FORCE;
-			break;
-		}
-
-		// DRONE DYNAMICS
-		// Calculate repulsive force from obstacle
-		float repulsion_force = calculate_repulsive_force(&obstacle, &drone);
-
-		// Decompose repulsive force into x and y components
-		float dx = drone.x - obstacle.x;
-		float dy = drone.y - obstacle.y;
-		float distance = sqrt(dx * dx + dy * dy);
-		if (distance > 0)
-		{
-			force_x += repulsion_force * (dx / distance);
-			force_y += repulsion_force * (dy / distance);
-		}
-
-		// Update drone position based on total forces
-		update_drone_position(&drone, force_x, force_y);
-
-		// Reset command force for next iteration (only apply once)
-		force_x = 0.0;
-		force_y = 0.0;
-
-		display(&drone, &obstacle);
-		// print velocity
-		mvprintw(0, 0, "Velocity: (%.2f, %.2f)", drone.vx, drone.vy);
-		refresh();
-		// usleep(DELAY); // Delay to control refresh rate
-		usleep(TIME_STEP * 1000000); // Delay to control refresh rate
+		perror("Failed to create pipes");
+		return 1;
 	}
 
-	endwin(); // Close ncurses mode
-	printf("Window size: %d x %d\n", COLS, LINES);
+	// Fork a new process for the Drone Dynamics
+	pid = fork();
+	if (pid == -1)
+	{
+		perror("Fork failed");
+		return 1;
+	}
+	else if (pid == 0)
+	{
+		// In child process - Drone Dynamics
+		// Close unnecessary pipe ends
+		close(pipe_out[1]); // Close write end of output pipe
+		close(pipe_in[0]);	// Close read end of input pipe
 
-	// print window size
+		// Redirect pipes to standard input/output for easy reading/writing in dynamics
+		dup2(pipe_out[0], STDIN_FILENO);
+		dup2(pipe_in[1], STDOUT_FILENO);
+
+		// Run the dynamics process
+		execl("./build/drone", "drone", NULL);
+		perror("Failed to exec drone");
+		exit(1);
+	}
+	else
+	{
+		// In parent process - Blackboard Server
+		// Close unnecessary pipe ends
+		close(pipe_out[0]); // Close read end of output pipe
+		close(pipe_in[1]);	// Close write end of input pipe
+
+		Drone drone;
+		Input input;
+		Object obstacle = {COLS / 3, LINES / 3}; // Place obstacle at a fixed point
+
+		int ch;
+		init_ncurses();
+
+		// send map size once at the beginning
+		write(pipe_out[1], &COLS, sizeof(int));
+		write(pipe_out[1], &LINES, sizeof(int));
+
+		while (1)
+		{
+			ch = getch(); // Capture user input
+			if (ch == 'q')
+				break; // Exit if 'q' is pressed
+
+			switch (ch)
+			{
+			// check for W keys
+			case KEY_UP:
+				if (drone.y > 0)
+					drone.y--;
+				break;
+			case KEY_DOWN:
+				if (drone.y < LINES - 1)
+					drone.y++;
+				break;
+			case KEY_LEFT:
+				if (drone.x > 0)
+					drone.x--;
+				break;
+			case KEY_RIGHT:
+				if (drone.x < COLS - 1)
+					drone.x++;
+				break;
+
+			case 'w':
+				input.n = 1;
+				input.w = 1;
+				break;
+			case 'e':
+				input.n = 1;
+				break;
+			case 'r':
+				input.n = 1;
+				input.e = 1;
+				break;
+			case 's':
+				input.e = 1;
+				break;
+			case 'd':
+				input.reset = 1;
+				break;
+			case 'f':
+				input.e = 1;
+				break;
+			case 'x':
+				input.s = 1;
+				input.w = 1;
+				break;
+			case 'c':
+				input.s = 1;
+				break;
+			case 'v':
+				input.s = 1;
+				input.e = 1;
+				break;
+			}
+
+			// Send input to Drone process
+			write(pipe_out[1], &input, sizeof(Input));
+
+			// Read updated position and velocity from Drone Dynamics
+			read(pipe_in[0], &drone, sizeof(Drone));
+
+			display(&drone, &obstacle);
+			// mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
+			// 		 drone.x, drone.y, drone.vx, drone.vy);
+			refresh();
+
+			reset_input(&input);
+
+			usleep(TIME_STEP * 1000000); // Delay to control refresh rate
+		}
+
+		// Close pipes and wait for the child process
+		close(pipe_out[1]);
+		close(pipe_in[0]);
+		wait(NULL); // Wait for child process to finish
+	}
+
 	return 0;
 }
