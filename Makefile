@@ -6,7 +6,7 @@ SRC = $(SRC_DIR)/blackboard.c
 
 # Compiler
 CC = gcc
-CFLAGS = -Wall -g -lncurses
+CFLAGS = -Wall -g -lncurses -lm
 
 # Rules
 all: $(TARGET)
