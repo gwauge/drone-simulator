@@ -111,10 +111,11 @@ int main()
 
 		Drone drone;
 		Input input;
-		Object obstacle = {COLS / 3, LINES / 3}; // Place obstacle at a fixed point
 
 		int ch;
 		init_ncurses();
+
+		Object obstacle = {COLS / 3, LINES / 3}; // Place obstacle at a fixed point
 
 		// send map size once at the beginning
 		write(pipe_out[1], &COLS, sizeof(int));
@@ -186,8 +187,8 @@ int main()
 			read(pipe_in[0], &drone, sizeof(Drone));
 
 			display(&drone, &obstacle);
-			// mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
-			// 		 drone.x, drone.y, drone.vx, drone.vy);
+			mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
+					 drone.x, drone.y, drone.vx, drone.vy);
 			refresh();
 
 			reset_input(&input);
@@ -199,6 +200,8 @@ int main()
 		close(pipe_out[1]);
 		close(pipe_in[0]);
 		wait(NULL); // Wait for child process to finish
+
+		endwin(); // Close ncurses mode
 	}
 
 	return 0;
