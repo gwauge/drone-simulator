@@ -23,6 +23,7 @@ $(TARGET_DRONE): $(SRC_DRONE)
 
 clean:
 	rm -rf $(BUILD_DIR)
+	rm -f /tmp/pipe_drone_write /tmp/pipe_drone_read
 
 run: $(TARGET_BLACKBOARD)
 	./$(TARGET_BLACKBOARD)

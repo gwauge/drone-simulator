@@ -8,6 +8,7 @@
 #include <sys/types.h>
 #include <types.h>
 #include <constants.h>
+#include <lib.c>
 
 void update_drone_position(Drone *drone, float fx, float fy)
 {
@@ -44,6 +45,8 @@ int main()
         exit(1);
     if (read(STDIN_FILENO, &LINES, sizeof(int)) <= 0)
         exit(1);
+
+    write(STDOUT_FILENO, "ACK", 3 + 1);
 
     Drone drone = {0.0, 0.0, 0.0, 0.0};      // Initialize drone at origin with zero velocity
     Input input = {0, 0, 0, 0};              // Initialize input commands

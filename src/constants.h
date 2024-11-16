@@ -1,4 +1,5 @@
 #define DELAY 50000 // Microseconds delay for refresh
+#define PIPE_NAME_SIZE 25
 
 #define DRONE "+"
 #define OBSTACLE "*"
