@@ -1,6 +1,8 @@
 {
     "files.associations": {
         "unistd.h": "c",
-        "constants.h": "c"
+        "constants.h": "c",
+        "pipes.h": "c",
+        "wait.h": "c"
     }
 }

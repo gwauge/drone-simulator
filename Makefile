@@ -1,31 +1,26 @@
-# Variables
-SRC_DIR = src
-BUILD_DIR = build
-TARGET_BLACKBOARD = $(BUILD_DIR)/blackboard
-TARGET_DRONE = $(BUILD_DIR)/drone
-SRC_BLACKBOARD = $(SRC_DIR)/blackboard.c
-SRC_DRONE = $(SRC_DIR)/drone.c
-
-# Compiler
 CC = gcc
-CFLAGS = -Wall -g -lncurses -lm -I$(SRC_DIR)
+CFLAGS = -Wall -Wextra -Iinclude -lncurses -lm
+SRCS = src/main.c src/drone.c src/blackboard.c src/test.c src/pipes.c src/utils.c
+OBJS = $(SRCS:src/%.c=build/%.o)
+TARGET = build/dronesim
 
-# Rules
-all: $(TARGET_BLACKBOARD) $(TARGET_DRONE)
+.DEFAULT_GOAL := default
 
-$(TARGET_BLACKBOARD): $(SRC_BLACKBOARD)
-	@mkdir -p $(BUILD_DIR)
+default: clean all
+
+all: $(TARGET)
+
+$(TARGET): $(OBJS)
 	$(CC) -o $@ $^ $(CFLAGS)
 
-$(TARGET_DRONE): $(SRC_DRONE)
-	@mkdir -p $(BUILD_DIR)
-	$(CC) -o $@ $^ $(CFLAGS)
+build/%.o: src/%.c
+	@mkdir -p build
+	$(CC) -c $< -o $@ $(CFLAGS)
 
 clean:
-	rm -rf $(BUILD_DIR)
-	rm -f /tmp/pipe_drone_write /tmp/pipe_drone_read
+	rm -rf build
 
-run: $(TARGET_BLACKBOARD)
-	./$(TARGET_BLACKBOARD)
+run: clean $(TARGET)
+	./$(TARGET)
 
-.PHONY: all clean run
+.PHONY: all clean run default

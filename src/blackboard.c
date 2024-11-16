@@ -1,15 +1,9 @@
+#include <blackboard.h>
+
 #include <ncurses.h>
 #include <unistd.h> // For usleep
 #include <stdlib.h> // For exit
-#include <time.h>
 #include <sys/wait.h>
-#include <string.h>
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/stat.h>
-#include <types.h>
-#include <constants.h>
-#include <lib.c>
 
 void init_colors()
 {
@@ -41,14 +35,14 @@ void init_ncurses()
 void draw_drone(Drone *drone)
 {
 	attron(COLOR_PAIR(DRONE_PAIR));
-	mvprintw(drone->y, drone->x, DRONE);
+	mvprintw(drone->y, drone->x, DRONE_SYMBOL);
 	attroff(COLOR_PAIR(DRONE_PAIR));
 }
 
 void draw_obstacles(Object *obstacle)
 {
 	attron(COLOR_PAIR(OBSTACLE_PAIR));
-	mvprintw(obstacle->y, obstacle->x, OBSTACLE);
+	mvprintw(obstacle->y, obstacle->x, OBSTACLE_SYMBOL);
 	attroff(COLOR_PAIR(OBSTACLE_PAIR));
 }
 
@@ -70,113 +64,7 @@ void reset_input(Input *input)
 	input->reset = 0;
 }
 
-ProcessInfo *create_process_and_pipe(char *process_name)
-{
-	ProcessInfo *process_info;
-	pid_t pid;
-
-	process_info = (ProcessInfo *)malloc(sizeof(ProcessInfo));
-	if (process_info == NULL)
-	{
-		perror("malloc");
-		exit(EXIT_FAILURE);
-	}
-
-	// Set process name
-	strcpy(process_info->process_name, process_name);
-
-	// Set pipe names
-	create_read_pipe_name(process_info->read_pipe_name, process_name);
-	create_write_pipe_name(process_info->write_pipe_name, process_name);
-
-	// Create named pipes
-	if (mkfifo(process_info->read_pipe_name, 0666) == -1)
-	{
-		perror("mkfifo");
-		exit(EXIT_FAILURE);
-	}
-	if (mkfifo(process_info->write_pipe_name, 0666) == -1)
-	{
-		perror("mkfifo");
-		exit(EXIT_FAILURE);
-	}
-
-	// Fork process
-	pid = fork();
-	if (pid < 0)
-	{
-		perror("fork");
-		exit(EXIT_FAILURE);
-	}
-
-	if (pid == 0)
-	{
-		// Child process
-		// Open named pipes
-		process_info->read_fd = open(process_info->read_pipe_name, O_RDONLY);
-		if (process_info->read_fd == -1)
-		{
-			perror("open read pipe");
-			exit(EXIT_FAILURE);
-		}
-		process_info->write_fd = open(process_info->write_pipe_name, O_WRONLY);
-		if (process_info->write_fd == -1)
-		{
-			perror("open write pipe");
-			exit(EXIT_FAILURE);
-		}
-
-		// Simulate process work
-		// char message[100];
-		// snprintf(message, sizeof(message), "Message from %s", process_info->process_name);
-		// write(process_info->write_fd, message, strlen(message) + 1);
-
-		// Redirect pipes to standard input/output for easy reading/writing in dynamics
-		dup2(process_info->read_fd, STDIN_FILENO);
-		dup2(process_info->write_fd, STDOUT_FILENO);
-
-		// dynamically generate the path to the executable
-		char *path = (char *)malloc(strlen("./build/") + strlen(process_info->process_name) + 1);
-		strcpy(path, "./build/");
-		strcat(path, process_info->process_name);
-
-		// Run the process
-		execl(path, process_info->process_name, NULL);
-
-		perror("Failed to exec");
-		exit(1);
-	}
-	else
-	{
-		// Parent process
-		// Open named pipes
-		process_info->read_fd = open(process_info->write_pipe_name, O_RDONLY | O_NONBLOCK);
-		if (process_info->read_fd == -1)
-		{
-			perror("open read pipe");
-			exit(EXIT_FAILURE);
-		}
-		process_info->write_fd = open(process_info->read_pipe_name, O_WRONLY);
-		if (process_info->write_fd == -1)
-		{
-			perror("open write pipe");
-			exit(EXIT_FAILURE);
-		}
-
-		return process_info;
-	}
-}
-
-void close_process_and_pipe(ProcessInfo *process_info)
-{
-	close(process_info->read_fd);
-	close(process_info->write_fd);
-	unlink(process_info->read_pipe_name);
-	unlink(process_info->write_pipe_name);
-	free(process_info);
-}
-
-int main()
+int blackboard()
 {
 	// create drone process
 	ProcessInfo *drone_process = create_process_and_pipe("drone");
