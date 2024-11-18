@@ -1,5 +1,8 @@
 #pragma once
 
+#define __USE_XOPEN
+#define _GNU_SOURCE
+
 #include <unistd.h> // For usleep
 #include <stdlib.h> // For exit
 #include <fcntl.h>
@@ -7,6 +10,12 @@
 #include <string.h>
 #include <sys/types.h>
 #include <sys/stat.h>
+#include <signal.h>
+#include <time.h>
+// #include <pthread.h>
+#include <semaphore.h>
+
+#define NUM_COMPONENTS 2
 
 #define DELAY 50000 // Microseconds delay for refresh
 #define PIPE_NAME_SIZE 25
@@ -34,3 +43,14 @@ typedef struct
 {
     int n, e, s, w, reset;
 } Input;
+
+#define LOGFILE "watchdog.log"
+
+extern sem_t *log_mutex;
+void init_mutex();
+void cleanup_mutex();
+void write_log(const char *message);
+void get_current_time(char *buffer, size_t size);
+void signal_handler();
+void register_signal_handler();
+void handle_select_error(int result);

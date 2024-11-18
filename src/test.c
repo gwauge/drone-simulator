@@ -9,6 +9,8 @@ int test_component()
 // Component1 logic
 void run_component1(int read_fd, int write_fd)
 {
+    register_signal_handler();
+
     pid_t pid = getpid();
     char buffer[256];
     read_from_pipe(read_fd, buffer, sizeof(buffer));

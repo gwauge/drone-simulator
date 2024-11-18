@@ -3,6 +3,8 @@
         "unistd.h": "c",
         "constants.h": "c",
         "pipes.h": "c",
-        "wait.h": "c"
+        "wait.h": "c",
+        "test.h": "c",
+        "watchdog.h": "c"
     }
 }

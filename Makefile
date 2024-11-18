@@ -1,6 +1,6 @@
 CC = gcc
 CFLAGS = -Wall -Wextra -Iinclude -lncurses -lm
-SRCS = src/main.c src/drone.c src/blackboard.c src/test.c src/pipes.c src/utils.c
+SRCS = src/main.c src/drone.c src/watchdog.c src/blackboard.c src/test.c src/pipes.c src/utils.c
 OBJS = $(SRCS:src/%.c=build/%.o)
 TARGET = build/dronesim
 
@@ -19,6 +19,7 @@ build/%.o: src/%.c
 
 clean:
 	rm -rf build
+	rm -f watchdog.log
 
 run: clean $(TARGET)
 	./$(TARGET)

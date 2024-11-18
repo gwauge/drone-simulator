@@ -31,7 +31,7 @@ float calculate_repulsive_force(Object *obstacle, Drone *drone)
 
 void drone_component(int read_fd, int write_fd)
 {
-	printf("Drone component - PID: %d\n", getpid());
+	register_signal_handler();
 
 	fd_set readfds;
 	struct timeval timeout;
@@ -60,6 +60,8 @@ void drone_component(int read_fd, int write_fd)
 		received = 0;
 
 		FD_ZERO(&readfds);
+
+		// Add the FDs to the fd_set
 		FD_SET(read_fd, &readfds);
 
 		timeout.tv_sec = 0; // Wait for up to 5 seconds
@@ -70,12 +72,8 @@ void drone_component(int read_fd, int write_fd)
 		force_y = 0.0;
 
 		int result = select(read_fd + 1, &readfds, NULL, NULL, &timeout);
-		if (result == -1)
-		{
-			perror("select");
-			exit(EXIT_FAILURE);
-		}
-		else if (result == 0)
+		handle_select_error(result);
+		if (result == 0)
 		{
 			// printf("Drone received: no input\n");
 		}
@@ -89,9 +87,9 @@ void drone_component(int read_fd, int write_fd)
 
 				received = 1;
 
-				printf(
-					"Drone received: n=%d, e=%d, s=%d, w=%d, reset=%d\n",
-					input.n, input.e, input.s, input.w, input.reset);
+				// printf(
+				// 	"Drone received: n=%d, e=%d, s=%d, w=%d, reset=%d\n",
+				// 	input.n, input.e, input.s, input.w, input.reset);
 
 				// convert input into control forces
 				if (input.n)
@@ -131,9 +129,9 @@ void drone_component(int read_fd, int write_fd)
 		// only write back to the blackboard server if we received new input
 		if (received)
 		{
-			// Write updated position and velocity back to the blackboard server
 			bytes_size = write(write_fd, &drone, sizeof(Drone));
 			handle_pipe_write_error(bytes_size);
+			// Write updated position and velocity back to the blackboard server
 		}
 
 		// reset force

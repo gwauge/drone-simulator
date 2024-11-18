@@ -3,6 +3,7 @@
 #include <ncurses.h>
 #include <unistd.h> // For usleep
 #include <stdlib.h> // For exit
+#include <sys/select.h>
 
 #include "utils.h"
 #include "pipes.h"
@@ -15,4 +16,5 @@ void draw_obstacles(Object *obstacle);
 void display(Drone *drone, Object *obstacle);
 void reset_input(Input *input);
 void blackboard(
-    Process *drone_process);
+    Process *drone_process,
+    Process *watchdog_process);
