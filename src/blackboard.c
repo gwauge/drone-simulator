@@ -1,9 +1,7 @@
-#include <blackboard.h>
+#include "blackboard.h"
 
-#include <ncurses.h>
-#include <unistd.h> // For usleep
-#include <stdlib.h> // For exit
-#include <sys/wait.h>
+int counter = 0;
+Input input = {0, 0, 0, 0, 0};
 
 void init_colors()
 {
@@ -64,37 +62,34 @@ void reset_input(Input *input)
 	input->reset = 0;
 }
 
-int blackboard()
+void send_map_size(Process *process)
 {
-	// create drone process
-	ProcessInfo *drone_process = create_process_and_pipe("drone");
-	printf("Drone process created: %s\n", drone_process->read_pipe_name);
+	size_t bytes_size;
+	// send map size once at the beginning
+	bytes_size = write(process->parent_to_child.write_fd, &COLS, sizeof(int));
+	handle_pipe_write_error(bytes_size);
+	bytes_size = write(process->parent_to_child.write_fd, &LINES, sizeof(int));
+	handle_pipe_write_error(bytes_size);
 
-	Drone drone;
-	Input input;
+	// read ACK from drone
+	char ack_message[256];
+	read_from_pipe(process->child_to_parent.read_fd, ack_message, sizeof(ack_message));
+	printf("Parent received from '%s': %s\n", process->name, ack_message);
+}
+
+void blackboard(Process *drone_process)
+{
+	size_t bytes_size;
+
+	pid_t pid = getpid();
 
 	int ch;
 	init_ncurses();
 
+	Drone drone;
 	Object obstacle = {COLS / 3, LINES / 3}; // Place obstacle at a fixed point
 
-	// send map size once at the beginning
-	write(drone_process->write_fd, &COLS, sizeof(int));
-	write(drone_process->write_fd, &LINES, sizeof(int));
-
-	// Read response from parent
-	char msg[100];
-	ssize_t bytes_read = read(drone_process->read_fd, msg, sizeof(msg));
-	if (bytes_read > 0)
-	{
-		printf("Parent received: %s\n", msg);
-	}
-	else if (bytes_read == -1)
-	{
-		perror("read");
-	}
-
-	printf("ACK received\n");
+	send_map_size(drone_process);
 
 	while (1)
 	{
@@ -156,25 +151,25 @@ int blackboard()
 		}
 
 		// Send input to Drone process
-		write(drone_process->write_fd, &input, sizeof(Input));
+		bytes_size = write(drone_process->parent_to_child.write_fd, &input, sizeof(Input));
+		handle_pipe_write_error(bytes_size);
 
-		// Read updated position and velocity from Drone Dynamics
-		read(drone_process->read_fd, &drone, sizeof(Drone));
+		// read drone position
+		bytes_size = read(drone_process->child_to_parent.read_fd, &drone, sizeof(Drone));
+		handle_pipe_read_error(bytes_size);
 
+		clear();
 		display(&drone, &obstacle);
 		mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
 				 drone.x, drone.y, drone.vx, drone.vy);
+		mvprintw(1, 0, "Received char: %d\n", ch);
+		mvprintw(2, 0, "PID: %d - Counter: %d\n", pid, counter);
 		refresh();
 
-		reset_input(&input);
+		// reset_input(&input);
 
 		usleep(TIME_STEP * 1000000); // Delay to control refresh rate
 	}
 
-	close_process_and_pipe(drone_process);
-	wait(NULL); // Wait for child process to finish
-
 	endwin(); // Close ncurses mode
-
-	return 0;
 }

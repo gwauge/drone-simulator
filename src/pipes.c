@@ -116,4 +116,10 @@ void fork_process_and_run(Process *process)
         process->run(process->parent_to_child.read_fd, process->child_to_parent.write_fd);
         exit(EXIT_SUCCESS);
     }
+    else
+    {
+        // In parent process
+        process->pid = pid;
+        close_unused_pipe_ends(&process->parent_to_child, &process->child_to_parent, 0);
+    }
 }

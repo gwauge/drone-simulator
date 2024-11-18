@@ -36,29 +36,29 @@ void drone_component(int read_fd, int write_fd)
 	fd_set readfds;
 	struct timeval timeout;
 
-	ssize_t bytes_read;
+	ssize_t bytes_size;
 
 	// Get terminal size
 	int COLS, LINES;
-	bytes_read = read(read_fd, &COLS, sizeof(int));
-	handle_pipe_read_error(bytes_read);
+	bytes_size = read(read_fd, &COLS, sizeof(int));
+	handle_pipe_read_error(bytes_size);
 
-	bytes_read = read(read_fd, &LINES, sizeof(int));
-	handle_pipe_read_error(bytes_read);
-	printf("Drone received COLS=%d, LINES=%d\n", COLS, LINES);
+	bytes_size = read(read_fd, &LINES, sizeof(int));
+	handle_pipe_read_error(bytes_size);
 
-	// write(STDOUT_FILENO, "ACK", 3 + 1);
-	bytes_read = write(write_fd, "ACK", 3 + 1);
-	handle_pipe_write_error(bytes_read);
+	bytes_size = write(write_fd, "ACK", 3 + 1);
+	handle_pipe_write_error(bytes_size);
 
-	Drone drone = {0.0, 0.0, 0.0, 0.0};		 // Initialize drone at origin with zero velocity
+	Drone drone = {10.0, 10.0, 0.0, 0.0};	 // Initialize drone at origin with zero velocity
 	Input input = {0, 0, 0, 0, 0};			 // Initialize input commands
 	Object obstacle = {COLS / 3, LINES / 3}; // Place obstacle at a fixed point
 	float force_x = 0.0, force_y = 0.0;
 
-	// set_nonblocking(read_fd);
+	int received = 0;
 	while (1)
 	{
+		received = 0;
+
 		FD_ZERO(&readfds);
 		FD_SET(read_fd, &readfds);
 
@@ -77,15 +77,17 @@ void drone_component(int read_fd, int write_fd)
 		}
 		else if (result == 0)
 		{
-			printf("Drone received: no input\n");
+			// printf("Drone received: no input\n");
 		}
 		else if (result > 0)
 		{
 			if (FD_ISSET(read_fd, &readfds))
 			{
 				// Read control forces from the pipe (e.g., from blackboard server)
-				bytes_read = read(read_fd, &input, sizeof(Input));
-				handle_pipe_read_error(bytes_read);
+				bytes_size = read(read_fd, &input, sizeof(Input));
+				handle_pipe_read_error(bytes_size);
+
+				received = 1;
 
 				printf(
 					"Drone received: n=%d, e=%d, s=%d, w=%d, reset=%d\n",
@@ -104,6 +106,8 @@ void drone_component(int read_fd, int write_fd)
 				{
 					drone.vx = 0;
 					drone.vy = 0;
+					drone.x = 10;
+					drone.y = 10;
 				}
 			}
 		}
@@ -124,9 +128,13 @@ void drone_component(int read_fd, int write_fd)
 		// Update drone position based on control forces
 		update_drone_position(&drone, force_x, force_y);
 
-		// Write updated position and velocity back to the blackboard server
-		bytes_read = write(write_fd, &drone, sizeof(Drone));
-		handle_pipe_write_error(bytes_read);
+		// only write back to the blackboard server if we received new input
+		if (received)
+		{
+			// Write updated position and velocity back to the blackboard server
+			bytes_size = write(write_fd, &drone, sizeof(Drone));
+			handle_pipe_write_error(bytes_size);
+		}
 
 		// reset force
 		force_x = 0.0;

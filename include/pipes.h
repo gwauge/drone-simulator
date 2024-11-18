@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <string.h>
+#include <sys/signal.h>
 
 typedef struct
 {
@@ -14,6 +15,7 @@ typedef struct
 
 typedef struct
 {
+    pid_t pid;
     char name[256];
     PipeEnds parent_to_child;
     PipeEnds child_to_parent;
