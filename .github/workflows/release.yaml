@@ -1,0 +1,37 @@
+name: Full Release
+
+on:
+  create:
+    tags:
+      - "*"
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake
+
+      - name: Build with Makefile
+        run: make
+
+      - name: Archive binary
+        run: |
+          mkdir -p artifacts
+          cp build/dronesim artifacts/
+          mv artifacts/dronesim artifacts/drone-simulation_linux_amd64
+
+      # - name: Generate release notes
+      #   id: notes
+      #   uses: release-drafter/release-drafter@v6
+
+      - name: Create full release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: artifacts/*
