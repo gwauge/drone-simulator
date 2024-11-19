@@ -6,6 +6,7 @@
 #include "blackboard.h"
 #include "watchdog.h"
 #include "drone.h"
+#include "obstacles.h"
 
 Process processes[NUM_COMPONENTS];
 
@@ -31,6 +32,7 @@ void shutdown()
 
 int main()
 {
+    printf("Starting main process with PID %d\n", getpid());
 
     size_t bytes_size;
 
@@ -44,6 +46,9 @@ int main()
     Process drone_process = create_process("drone", drone_component);
     processes[1] = drone_process;
 
+    Process obstacle_process = create_process("obstacles", obstacles_component);
+    processes[2] = obstacle_process;
+
     // Fork processes
     for (int i = 0; i < NUM_COMPONENTS; i++)
     {
@@ -52,9 +57,6 @@ int main()
 
     // === PARENT ===
     signal(SIGINT, shutdown);
-
-    // Communicate with components
-    test_component(); // parent
 
     // Communicate with watchdog
     pid_t pids[NUM_COMPONENTS];
@@ -66,7 +68,7 @@ int main()
     bytes_size = write(watchdog_process.parent_to_child.write_fd, &pids, sizeof(pids));
     handle_pipe_write_error(bytes_size);
 
-    blackboard(&drone_process, &watchdog_process);
+    blackboard(&watchdog_process, &drone_process, &obstacle_process);
 
     shutdown();
 

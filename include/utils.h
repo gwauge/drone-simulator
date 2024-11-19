@@ -15,7 +15,8 @@
 // #include <pthread.h>
 #include <semaphore.h>
 
-#define NUM_COMPONENTS 2
+#define NUM_COMPONENTS 3
+#define NUM_OBSTACLES 20
 
 #define DELAY 50000 // Microseconds delay for refresh
 #define PIPE_NAME_SIZE 25
@@ -43,6 +44,25 @@ typedef struct
 {
     int n, e, s, w, reset;
 } Input;
+
+typedef struct
+{
+    int lifetime;
+    int x, y;
+} Obstacle;
+
+typedef struct
+{
+    float x, y;
+    float vx, vy;
+} Drone;
+
+typedef struct
+{
+    Input input;
+    Drone drone;
+    Obstacle obstacles[NUM_OBSTACLES];
+} WorldState;
 
 #define LOGFILE "watchdog.log"
 

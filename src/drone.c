@@ -1,6 +1,4 @@
-#include <sys/select.h>
 #include "drone.h"
-#include "pipes.h"
 
 void update_drone_position(Drone *drone, float fx, float fy)
 {
@@ -13,7 +11,7 @@ void update_drone_position(Drone *drone, float fx, float fy)
 	drone->y += drone->vy * TIME_STEP;
 }
 
-float calculate_repulsive_force(Object *obstacle, Drone *drone)
+float calculate_repulsive_force(Obstacle *obstacle, Drone *drone)
 {
 	// Calculate distance to obstacle
 	float dx = drone->x - obstacle->x;
@@ -46,12 +44,8 @@ void drone_component(int read_fd, int write_fd)
 	bytes_size = read(read_fd, &LINES, sizeof(int));
 	handle_pipe_read_error(bytes_size);
 
-	bytes_size = write(write_fd, "ACK", 3 + 1);
-	handle_pipe_write_error(bytes_size);
-
-	Drone drone = {10.0, 10.0, 0.0, 0.0};	 // Initialize drone at origin with zero velocity
-	Input input = {0, 0, 0, 0, 0};			 // Initialize input commands
-	Object obstacle = {COLS / 3, LINES / 3}; // Place obstacle at a fixed point
+	Drone drone = {10.0, 10.0, 0.0, 0.0}; // Initialize drone at origin with zero velocity
+	WorldState world_state;
 	float force_x = 0.0, force_y = 0.0;
 
 	int received = 0;
@@ -82,7 +76,7 @@ void drone_component(int read_fd, int write_fd)
 			if (FD_ISSET(read_fd, &readfds))
 			{
 				// Read control forces from the pipe (e.g., from blackboard server)
-				bytes_size = read(read_fd, &input, sizeof(Input));
+				bytes_size = read(read_fd, &world_state, sizeof(world_state));
 				handle_pipe_read_error(bytes_size);
 
 				received = 1;
@@ -92,15 +86,15 @@ void drone_component(int read_fd, int write_fd)
 				// 	input.n, input.e, input.s, input.w, input.reset);
 
 				// convert input into control forces
-				if (input.n)
+				if (world_state.input.n)
 					force_y -= COMMAND_FORCE;
-				if (input.s)
+				if (world_state.input.s)
 					force_y += COMMAND_FORCE;
-				if (input.e)
+				if (world_state.input.e)
 					force_x += COMMAND_FORCE;
-				if (input.w)
+				if (world_state.input.w)
 					force_x -= COMMAND_FORCE;
-				if (input.reset)
+				if (world_state.input.reset)
 				{
 					drone.vx = 0;
 					drone.vy = 0;
@@ -110,17 +104,27 @@ void drone_component(int read_fd, int write_fd)
 			}
 		}
 
-		// Calculate repulsive force from obstacle
-		float repulsion_force = calculate_repulsive_force(&obstacle, &drone);
-
-		// Decompose repulsive force into x and y components
-		float dx = drone.x - obstacle.x;
-		float dy = drone.y - obstacle.y;
-		float distance = sqrt(dx * dx + dy * dy);
-		if (distance > 0)
+		// Update drone position based on control forces
+		for (int i = 0; i < NUM_OBSTACLES; i++)
 		{
-			force_x += repulsion_force * (dx / distance);
-			force_y += repulsion_force * (dy / distance);
+			Obstacle obstacle = world_state.obstacles[i];
+			if (obstacle.lifetime == OBSTACLE_UNSET)
+			{
+				continue;
+			}
+
+			// Calculate repulsive force from obstacle
+			float repulsion_force = calculate_repulsive_force(&obstacle, &drone);
+
+			// Decompose repulsive force into x and y components
+			float dx = drone.x - obstacle.x;
+			float dy = drone.y - obstacle.y;
+			float distance = sqrt(dx * dx + dy * dy);
+			if (distance > 0)
+			{
+				force_x += repulsion_force * (dx / distance);
+				force_y += repulsion_force * (dy / distance);
+			}
 		}
 
 		// Update drone position based on control forces
@@ -129,9 +133,9 @@ void drone_component(int read_fd, int write_fd)
 		// only write back to the blackboard server if we received new input
 		if (received)
 		{
+			// Write updated position and velocity back to the blackboard server
 			bytes_size = write(write_fd, &drone, sizeof(Drone));
 			handle_pipe_write_error(bytes_size);
-			// Write updated position and velocity back to the blackboard server
 		}
 
 		// reset force

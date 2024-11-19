@@ -44,7 +44,7 @@ int check_logfile(pid_t *pids)
     fclose(log);
     sem_post(log_mutex); // Release the lock
 
-    for (int i = 0; i < NUM_COMPONENTS; i++)
+    for (int i = 1; i < NUM_COMPONENTS; i++)
     {
         if (!active[i])
         {
@@ -78,7 +78,6 @@ void watchdog_component(int read_fd, int write_fd)
     {
         bytes_size = read(read_fd, &pids[i], sizeof(pid_t));
         handle_pipe_read_error(bytes_size);
-        // printf("Watchdog received PID: %d\n", pids[i]);
     }
 
     int active;
