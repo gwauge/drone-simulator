@@ -16,7 +16,6 @@ set(SRCS
     src/watchdog.c
     src/obstacles.c
     src/blackboard.c
-    src/test.c
     src/pipes.c
     src/utils.c
 )
