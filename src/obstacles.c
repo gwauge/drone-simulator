@@ -13,7 +13,7 @@ void addObstacle(int COLS, int LINES, Obstacle *obstacles, int *free_slots)
                 rand() % LINES,                     // y position
             };
 
-            *free_slots--;
+            *free_slots -= 1;
             break;
         }
     }
