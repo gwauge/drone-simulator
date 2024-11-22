@@ -2,9 +2,20 @@ cmake_minimum_required(VERSION 3.10)
 
 # Project name
 project(drone-simulator LANGUAGES C)
-
 # Set the C standard
 set(CMAKE_C_STANDARD 11)
+
+option(CI_BUILD "Set to ON for complete build in CI." OFF)
+
+if (NOT CMAKE_BUILD_TYPE)
+    message(STATUS "No build type specified. Defaulting to Debug.\n\tUse `cmake -DCMAKE_BUILD_TYPE=Release ..` to build an optimized version.")
+    add_compile_options(-g)
+endif ()
+
+if (CMAKE_BUILD_TYPE MATCHES Release)
+    message(STATUS "Building an optimized release version.")
+    add_compile_options(-O3)
+endif ()
 
 # === MAIN EXECUTABLE ===
 # Include directories
@@ -29,9 +40,6 @@ target_link_libraries(dronesim dronesim_lib ncurses m)
 
 # Add compiler flags
 target_compile_options(dronesim PRIVATE -Wall -Wextra)
-
-# Set build types
-set(CMAKE_C_FLAGS_DEBUG "-g")
 
 # === TESTING ===
 # Add executable & link libraries

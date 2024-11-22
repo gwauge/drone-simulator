@@ -22,7 +22,7 @@ jobs:
         run: |
           mkdir -p build
           cd build
-          cmake ..
+          cmake -D CMAKE_BUILD_TYPE=Release ..
 
       - name: Build with cmake
         run: |
