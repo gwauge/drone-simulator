@@ -15,5 +15,6 @@
 
 struct Obstacle;
 
+Obstacle make_obstacle(int lifetime, int x, int y);
 void addObstacle(int COLS, int LINES, Obstacle *obstacles, int *free_slots);
 void obstacles_component(int read_fd, int write_fd);

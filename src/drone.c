@@ -1,5 +1,11 @@
 #include "drone.h"
 
+Drone make_drone(float x, float y, float vx, float vy)
+{
+	Drone drone = {x, y, vx, vy};
+	return drone;
+}
+
 void update_drone_position(Drone *drone, float fx, float fy)
 {
 	// Update velocities based on force and damping

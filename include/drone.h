@@ -16,6 +16,7 @@
 
 struct Drone;
 
+Drone make_drone(float x, float y, float vx, float vy);
 void update_drone_position(Drone *drone, float fx, float fy);
 float calculate_repulsive_force(Obstacle *obstacles, Drone *drone);
 void drone_component(int read_fd, int write_fd);

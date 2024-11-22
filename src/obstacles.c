@@ -1,5 +1,11 @@
 #include "obstacles.h"
 
+Obstacle make_obstacle(int lifetime, int x, int y)
+{
+    Obstacle obstacle = {lifetime, x, y};
+    return obstacle;
+}
+
 // Add an obstacle at a random position with a random lifetime
 void addObstacle(int COLS, int LINES, Obstacle *obstacles, int *free_slots)
 {
@@ -7,11 +13,10 @@ void addObstacle(int COLS, int LINES, Obstacle *obstacles, int *free_slots)
     {
         if (obstacles[i].lifetime == OBSTACLE_UNSET)
         {
-            obstacles[i] = (Obstacle){
-                rand() % OBSTACLE_MAX_LIFETIME + 1, // lifetime
-                rand() % COLS,                      // x position
-                rand() % LINES,                     // y position
-            };
+            obstacles[i] = make_obstacle(
+                rand() % OBSTACLE_MAX_LIFETIME + 1,
+                rand() % COLS,
+                rand() % LINES);
 
             *free_slots -= 1;
             break;
