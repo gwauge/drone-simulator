@@ -164,7 +164,7 @@ void blackboard(Process *watchdog_process, Process *drone_process, Process *obst
 			world_state.input.e = 1;
 			break;
 		case 's':
-			world_state.input.e = 1;
+			world_state.input.w = 1;
 			break;
 		case 'd':
 			world_state.input.reset = 1;
