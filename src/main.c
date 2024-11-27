@@ -6,6 +6,7 @@
 #include "watchdog.h"
 #include "drone.h"
 #include "obstacles.h"
+#include "targets.h"
 
 Process processes[NUM_COMPONENTS];
 
@@ -48,6 +49,9 @@ int main()
     Process obstacle_process = create_process("obstacles", obstacles_component);
     processes[2] = obstacle_process;
 
+    Process targets_process = create_process("targets", targets_component);
+    processes[3] = targets_process;
+
     // Fork processes
     for (int i = 0; i < NUM_COMPONENTS; i++)
     {
@@ -67,7 +71,7 @@ int main()
     bytes_size = write(watchdog_process.parent_to_child.write_fd, &pids, sizeof(pids));
     handle_pipe_write_error(bytes_size);
 
-    blackboard(&watchdog_process, &drone_process, &obstacle_process);
+    blackboard(&watchdog_process, &drone_process, &obstacle_process, &targets_process);
 
     shutdown();
 

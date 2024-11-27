@@ -47,12 +47,26 @@ void draw_obstacles(Obstacle *obstacles)
 	attroff(COLOR_PAIR(OBSTACLE_PAIR));
 }
 
+void draw_targets(Target *targets)
+{
+	attron(COLOR_PAIR(TARGET_PAIR));
+	for (int i = 0; i < NUM_TARGETS; i++)
+	{
+		if (targets[i].number != TARGET_UNSET)
+		{
+			mvprintw(targets[i].y, targets[i].x, "%d", targets[i].number);
+		}
+	}
+	attroff(COLOR_PAIR(TARGET_PAIR));
+}
+
 // Function to display the obstacle and drone
 void display(WorldState *world_state)
 {
 	clear();
 	draw_drone(&world_state->drone);		// Display drone
 	draw_obstacles(world_state->obstacles); // Display obstacles
+	draw_targets(world_state->targets);		// Display targets
 	refresh();
 }
 
@@ -88,7 +102,11 @@ void rotate_fds(int *fds, int count)
 	}
 }
 
-void blackboard(Process *watchdog_process, Process *drone_process, Process *obstacle_process)
+void blackboard(
+	Process *watchdog_process,
+	Process *drone_process,
+	Process *obstacle_process,
+	Process *targets_process)
 {
 	size_t bytes_size;
 
@@ -99,6 +117,7 @@ void blackboard(Process *watchdog_process, Process *drone_process, Process *obst
 	read_fds[0] = watchdog_process->child_to_parent.read_fd;
 	read_fds[1] = drone_process->child_to_parent.read_fd;
 	read_fds[2] = obstacle_process->child_to_parent.read_fd;
+	read_fds[3] = targets_process->child_to_parent.read_fd;
 
 	// find max fd
 	for (int i = 0; i < NUM_COMPONENTS; i++)
@@ -128,6 +147,7 @@ void blackboard(Process *watchdog_process, Process *drone_process, Process *obst
 
 	send_map_size(drone_process);
 	send_map_size(obstacle_process);
+	send_map_size(targets_process);
 
 	int counter = 0;
 
@@ -141,7 +161,6 @@ void blackboard(Process *watchdog_process, Process *drone_process, Process *obst
 			break;
 		}
 
-		// /*
 		// handle user input
 		ch = getch(); // Capture user input
 		if (ch == 'q')
@@ -184,7 +203,10 @@ void blackboard(Process *watchdog_process, Process *drone_process, Process *obst
 			world_state.input.e = 1;
 			break;
 		}
-		// */
+
+		// Send input to Drone process
+		bytes_size = write(drone_process->parent_to_child.write_fd, &world_state, sizeof(WorldState));
+		handle_pipe_write_error(bytes_size);
 
 		// Send input to Drone process
 		bytes_size = write(drone_process->parent_to_child.write_fd, &world_state, sizeof(WorldState));
@@ -216,6 +238,10 @@ void blackboard(Process *watchdog_process, Process *drone_process, Process *obst
 					bytes_size = read(fd, &world_state.drone, sizeof(Drone));
 					handle_pipe_read_error(bytes_size);
 
+					// send drone position to targets component
+					bytes_size = write(targets_process->parent_to_child.write_fd, &world_state.drone, sizeof(Drone));
+					handle_pipe_write_error(bytes_size);
+
 					clear();
 					display(&world_state);
 					mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
@@ -236,6 +262,12 @@ void blackboard(Process *watchdog_process, Process *drone_process, Process *obst
 					bytes_size = read(fd, &world_state.obstacles, sizeof(Obstacle) * NUM_OBSTACLES);
 					handle_pipe_read_error(bytes_size);
 					mvprintw(4, 0, "Last received: obstacles (%d)\n", obstacle_process->pid);
+				}
+				else if (fd == targets_process->child_to_parent.read_fd)
+				{
+					bytes_size = read(fd, &world_state.targets, sizeof(Target) * NUM_TARGETS);
+					handle_pipe_read_error(bytes_size);
+					mvprintw(4, 0, "Last received: targets (%d)\n", targets_process->pid);
 				}
 			}
 		}

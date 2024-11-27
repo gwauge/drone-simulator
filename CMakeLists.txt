@@ -26,6 +26,7 @@ set(SRCS
     src/drone.c
     src/watchdog.c
     src/obstacles.c
+    src/targets.c
     src/blackboard.c
     src/pipes.c
     src/utils.c
