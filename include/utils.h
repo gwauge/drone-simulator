@@ -15,6 +15,8 @@
 // #include <pthread.h>
 #include <semaphore.h>
 
+#define DEBUG 0
+
 #define NUM_COMPONENTS 4
 #define NUM_OBSTACLES 20
 #define NUM_TARGETS 10

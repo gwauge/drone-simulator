@@ -138,7 +138,15 @@ void blackboard(
 	pid_t pid = getpid();
 
 	int ch;
-	init_ncurses();
+	if (DEBUG)
+	{
+		COLS = 150;
+		LINES = 70;
+	}
+	else
+	{
+		init_ncurses();
+	}
 
 	int active = 1; // boolean indicating if all processes are active
 
@@ -208,10 +216,6 @@ void blackboard(
 		bytes_size = write(drone_process->parent_to_child.write_fd, &world_state, sizeof(WorldState));
 		handle_pipe_write_error(bytes_size);
 
-		// Send input to Drone process
-		bytes_size = write(drone_process->parent_to_child.write_fd, &world_state, sizeof(WorldState));
-		handle_pipe_write_error(bytes_size);
-
 		reset_input(&world_state.input);
 
 		// select file descriptors
@@ -226,6 +230,9 @@ void blackboard(
 		int ready_count = select(max_fd + 1, &read_set, NULL, NULL, NULL);
 		handle_select_error(ready_count);
 
+		if (!DEBUG)
+			clear(); // Clear the screen
+
 		// Check which file descriptors are ready
 		for (int i = 0; i < NUM_COMPONENTS; ++i)
 		{
@@ -238,47 +245,76 @@ void blackboard(
 					bytes_size = read(fd, &world_state.drone, sizeof(Drone));
 					handle_pipe_read_error(bytes_size);
 
-					// send drone position to targets component
-					bytes_size = write(targets_process->parent_to_child.write_fd, &world_state.drone, sizeof(Drone));
-					handle_pipe_write_error(bytes_size);
+					// check for target collisions
+					int collision_idx = -1;
+					for (int i = 0; i < NUM_TARGETS; i++)
+					{
+						if (world_state.targets[i].number != TARGET_UNSET)
+						{
+							if (
+								(int)world_state.drone.x == world_state.targets[i].x &&
+								(int)world_state.drone.y == world_state.targets[i].y)
+							{
+								collision_idx = i;
+								break;
+							}
+						}
+					}
 
-					clear();
-					display(&world_state);
-					mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
-							 world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
-					mvprintw(1, 0, "Received char: %d\n", ch);
-					mvprintw(2, 0, "PID: %d - Counter: %d\n", pid, counter);
-					mvprintw(3, 0, "Active: %d\n", active);
-					mvprintw(4, 0, "Last received: drone (%d)\n", drone_process->pid);
+					if (DEBUG)
+					{
+						printf("[drone] updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
+							   world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
+						if (collision_idx >= 0)
+						{
+							printf("\tCollision detected with target %d\n", collision_idx);
+						}
+					}
+
+					if (collision_idx >= 0)
+					{
+						// Send collision index to targets component
+						bytes_size = write(targets_process->parent_to_child.write_fd, &collision_idx, sizeof(int));
+						handle_pipe_write_error(bytes_size);
+					}
 				}
 				else if (fd == watchdog_process->child_to_parent.read_fd)
 				{
 					// Read watchdog message
 					bytes_size = read(fd, &active, sizeof(active));
-					mvprintw(4, 0, "Last received: watchdog (%d)\n", watchdog_process->pid);
+					handle_pipe_read_error(bytes_size);
 				}
 				else if (fd == obstacle_process->child_to_parent.read_fd)
 				{
 					bytes_size = read(fd, &world_state.obstacles, sizeof(Obstacle) * NUM_OBSTACLES);
 					handle_pipe_read_error(bytes_size);
-					mvprintw(4, 0, "Last received: obstacles (%d)\n", obstacle_process->pid);
+
+					if (DEBUG)
+						printf("[obstacles] updated\n");
 				}
 				else if (fd == targets_process->child_to_parent.read_fd)
 				{
 					bytes_size = read(fd, &world_state.targets, sizeof(Target) * NUM_TARGETS);
 					handle_pipe_read_error(bytes_size);
-					mvprintw(4, 0, "Last received: targets (%d)\n", targets_process->pid);
+
+					if (DEBUG)
+						printf("[targets] updated\n");
 				}
 			}
 		}
 
-		refresh();
+		if (!DEBUG)
+		{
+			display(&world_state);
+			mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
+					 world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
+			refresh();
+		}
 
 		// Rotate file descriptors to ensure fairness
 		rotate_fds(read_fds, NUM_COMPONENTS);
-
-		// usleep(TIME_STEP * 1000000); // Delay to control refresh rate
 	}
 
-	endwin(); // Close ncurses mode
+	if (!DEBUG)
+		endwin(); // Close ncurses mode
 }

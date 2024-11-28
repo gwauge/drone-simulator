@@ -30,11 +30,20 @@ void addTarget(int COLS, int LINES, Target *targets, int *free_slots, int *numbe
     }
 }
 
+void send_targets(int write_fd, Target *targets)
+{
+    ssize_t bytes_size = write(write_fd, targets, sizeof(Target) * NUM_TARGETS);
+    handle_pipe_write_error(bytes_size);
+}
+
 void targets_component(int read_fd, int write_fd)
 {
     register_signal_handler();
 
     srand(time(NULL));
+
+    fd_set readfds;
+    struct timeval timeout;
 
     ssize_t bytes_size;
 
@@ -61,23 +70,50 @@ void targets_component(int read_fd, int write_fd)
         addTarget(COLS, LINES, targets, &free_slots, &number);
     }
 
+    if (DEBUG)
+    {
+        printf("[targets] COLS: %d, LINES: %d\n", COLS, LINES);
+        targets[0] = make_target(0, 10, 10);
+    }
+
+    // Send initial targets to blackboard
+    send_targets(write_fd, targets);
+
     Drone drone;
 
     while (1)
     {
-        bytes_size = read(read_fd, &drone, sizeof(Drone));
-        handle_pipe_read_error(bytes_size);
+        FD_ZERO(&readfds);
 
-        // check for collisions
-        for (int i = 0; i < NUM_TARGETS; i++)
+        // Add the FDs to the fd_set
+        FD_SET(read_fd, &readfds);
+
+        timeout.tv_sec = 0; // Wait for up to 5 seconds
+        timeout.tv_usec = 0;
+
+        // check if a collision has occurred
+        int result = select(read_fd + 1, &readfds, NULL, NULL, &timeout);
+        handle_select_error(result);
+        if (result > 0)
         {
-            if (targets[i].number != TARGET_UNSET)
+            if (FD_ISSET(read_fd, &readfds))
             {
-                if (targets[i].x == (int)drone.x && targets[i].y == (int)drone.y)
+                int collision_idx;
+                bytes_size = read(read_fd, &collision_idx, sizeof(int));
+                handle_pipe_read_error(bytes_size);
+
+                if (collision_idx >= 0 && collision_idx < NUM_TARGETS && targets[collision_idx].number != TARGET_UNSET)
+                    if (DEBUG)
+                    {
+                        printf("[targets] received detected collision with target %d\n", collision_idx);
+                    }
                 {
-                    // remove target
-                    targets[i].number = TARGET_UNSET;
-                    free_slots++;
+                    // Reset target
+                    targets[collision_idx].number = TARGET_UNSET;
+                    free_slots += 1;
+
+                    // Send targets to blackboard
+                    send_targets(write_fd, targets);
                 }
             }
         }
@@ -87,11 +123,14 @@ void targets_component(int read_fd, int write_fd)
         {
             // with a chance of 1 in P add an obstacle
             if (rand() % TARGET_SPAWN_CHANCE == 0)
+            {
                 addTarget(COLS, LINES, targets, &free_slots, &number);
+
+                // Send targets to blackboard
+                send_targets(write_fd, targets);
+            }
         }
 
-        // Send targets to blackboard
-        bytes_size = write(write_fd, targets, sizeof(Target) * NUM_TARGETS);
-        handle_pipe_write_error(bytes_size);
+        sleep(1); // Sleep for 1 second
     }
 }
