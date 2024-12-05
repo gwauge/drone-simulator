@@ -5,6 +5,70 @@
 
 sem_t *log_mutex = NULL;
 
+Parameters global_params; // Define the global variable
+
+int parse_parameters()
+{
+    FILE *file;
+    char jsonBuffer[MAX_FILE_SIZE];
+
+    file = fopen("../appsettings.json", "r");
+
+    if (file == NULL)
+    {
+        perror("Error opening the file");
+        return EXIT_FAILURE; // 1
+    }
+
+    int len = fread(jsonBuffer, 1, sizeof(jsonBuffer), file);
+    fclose(file);
+
+    cJSON *json = cJSON_Parse(jsonBuffer); // parse the text to json object
+
+    if (json == NULL)
+    {
+        perror("Error parsing the file");
+        return EXIT_FAILURE;
+    }
+
+    global_params.debug = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "DEBUG"));
+    global_params.num_obstacles = cJSON_GetObjectItemCaseSensitive(json, "NUM_OBSTACLES")->valueint;
+    if (global_params.num_obstacles > OBSTACLES_MAX_NUMBER)
+    {
+        printf("Number of obstacles exceeds the maximum limit\n");
+        return EXIT_FAILURE;
+    }
+    global_params.obstacle_max_lifetime = cJSON_GetObjectItemCaseSensitive(json, "OBSTACLE_MAX_LIFETIME")->valueint;
+    global_params.obstacle_spawn_chance = cJSON_GetObjectItemCaseSensitive(json, "OBSTACLE_SPAWN_CHANCE")->valueint;
+    global_params.obstacle_start_count = cJSON_GetObjectItemCaseSensitive(json, "OBSTACLE_START_COUNT")->valueint;
+
+    global_params.num_targets = cJSON_GetObjectItemCaseSensitive(json, "NUM_TARGETS")->valueint;
+    if (global_params.num_targets > TARGETS_MAX_NUMBER)
+    {
+        printf("Number of targets exceeds the maximum limit\n");
+        return EXIT_FAILURE;
+    }
+    global_params.target_spawn_chance = cJSON_GetObjectItemCaseSensitive(json, "TARGET_SPAWN_CHANCE")->valueint;
+    global_params.target_start_count = cJSON_GetObjectItemCaseSensitive(json, "TARGET_START_COUNT")->valueint;
+
+    global_params.delay = cJSON_GetObjectItemCaseSensitive(json, "DELAY")->valueint;
+    global_params.drone_symbol = cJSON_GetObjectItemCaseSensitive(json, "DRONE_SYMBOL")->valuestring[0];
+    global_params.obstacle_symbol = cJSON_GetObjectItemCaseSensitive(json, "OBSTACLE_SYMBOL")->valuestring[0];
+    global_params.command_force = cJSON_GetObjectItemCaseSensitive(json, "COMMAND_FORCE")->valuedouble;
+    global_params.mass = cJSON_GetObjectItemCaseSensitive(json, "MASS")->valuedouble;
+    global_params.damping = cJSON_GetObjectItemCaseSensitive(json, "DAMPING")->valuedouble;
+    global_params.time_step = cJSON_GetObjectItemCaseSensitive(json, "TIME_STEP")->valuedouble;
+    global_params.repulsion_radius = cJSON_GetObjectItemCaseSensitive(json, "REPULSION_RADIUS")->valuedouble;
+    global_params.eta = cJSON_GetObjectItemCaseSensitive(json, "ETA")->valuedouble;
+
+    if (global_params.debug)
+        LOG(&global_params);
+
+    cJSON_Delete(json); // clean
+
+    return EXIT_SUCCESS; // 0
+}
+
 void init_mutex()
 {
     log_mutex = sem_open("/log_mutex", O_CREAT, 0644, 1);

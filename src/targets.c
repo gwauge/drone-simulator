@@ -9,7 +9,7 @@ Target make_target(int number, int x, int y)
 // Add a target at a random position
 void addTarget(int COLS, int LINES, Target *targets, int *free_slots, int *number)
 {
-    for (int i = 0; i < NUM_OBSTACLES; i++)
+    for (int i = 0; i < global_params.num_targets; i++)
     {
         if (targets[i].number == TARGET_UNSET)
         {
@@ -22,7 +22,7 @@ void addTarget(int COLS, int LINES, Target *targets, int *free_slots, int *numbe
 
             *number += 1;
             // make sure number is not too large
-            if (*number > NUM_TARGETS - 1)
+            if (*number > global_params.num_targets - 1)
                 *number = 0;
 
             break;
@@ -32,7 +32,7 @@ void addTarget(int COLS, int LINES, Target *targets, int *free_slots, int *numbe
 
 void send_targets(int write_fd, Target *targets)
 {
-    ssize_t bytes_size = write(write_fd, targets, sizeof(Target) * NUM_TARGETS);
+    ssize_t bytes_size = write(write_fd, targets, sizeof(Target) * global_params.num_targets);
     handle_pipe_write_error(bytes_size);
 }
 
@@ -56,21 +56,21 @@ void targets_component(int read_fd, int write_fd)
     handle_pipe_read_error(bytes_size);
 
     // Initialize targets
-    Target targets[NUM_TARGETS];
-    int free_slots = NUM_TARGETS;
+    Target targets[global_params.num_targets];
+    int free_slots = global_params.num_targets;
     int number = 0;
-    for (int i = 0; i < NUM_TARGETS; ++i)
+    for (int i = 0; i < global_params.num_targets; ++i)
     {
         targets[i].number = TARGET_UNSET;
     }
 
     // Add initial targets
-    for (int i = 0; i < TARGET_START_COUNT; ++i)
+    for (int i = 0; i < global_params.target_start_count; ++i)
     {
         addTarget(COLS, LINES, targets, &free_slots, &number);
     }
 
-    if (DEBUG)
+    if (global_params.debug)
     {
         printf("[targets] COLS: %d, LINES: %d\n", COLS, LINES);
         targets[0] = make_target(0, 10, 10);
@@ -102,8 +102,8 @@ void targets_component(int read_fd, int write_fd)
                 bytes_size = read(read_fd, &collision_idx, sizeof(int));
                 handle_pipe_read_error(bytes_size);
 
-                if (collision_idx >= 0 && collision_idx < NUM_TARGETS && targets[collision_idx].number != TARGET_UNSET)
-                    if (DEBUG)
+                if (collision_idx >= 0 && collision_idx < global_params.num_targets && targets[collision_idx].number != TARGET_UNSET)
+                    if (global_params.debug)
                     {
                         printf("[targets] received detected collision with target %d\n", collision_idx);
                     }
@@ -122,7 +122,7 @@ void targets_component(int read_fd, int write_fd)
         if (free_slots > 0)
         {
             // with a chance of 1 in P add an obstacle
-            if (rand() % TARGET_SPAWN_CHANCE == 0)
+            if (rand() % global_params.target_spawn_chance == 0)
             {
                 addTarget(COLS, LINES, targets, &free_slots, &number);
 

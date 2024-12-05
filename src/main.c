@@ -34,6 +34,12 @@ int main()
 {
     printf("Starting main process with PID %d\n", getpid());
 
+    if (parse_parameters() != 0)
+    {
+        shutdown();
+        exit(EXIT_FAILURE);
+    }
+
     size_t bytes_size;
 
     // Initialize mutex

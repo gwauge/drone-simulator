@@ -9,9 +9,9 @@
 #include "utils.h"
 #include "pipes.h"
 
-#define TARGET_START_COUNT 5
+// #define TARGET_START_COUNT 5
 #define TARGET_UNSET -1
-#define TARGET_SPAWN_CHANCE 10 // 1 in P chance of spawning a new obstacle per time step if there are free slots
+// #define TARGET_SPAWN_CHANCE 10 // 1 in P chance of spawning a new obstacle per time step if there are free slots
 
 struct Target;
 

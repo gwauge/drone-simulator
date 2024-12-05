@@ -9,12 +9,12 @@ Obstacle make_obstacle(int lifetime, int x, int y)
 // Add an obstacle at a random position with a random lifetime
 void addObstacle(int COLS, int LINES, Obstacle *obstacles, int *free_slots)
 {
-    for (int i = 0; i < NUM_OBSTACLES; i++)
+    for (int i = 0; i < global_params.num_obstacles; i++)
     {
         if (obstacles[i].lifetime == OBSTACLE_UNSET)
         {
             obstacles[i] = make_obstacle(
-                rand() % OBSTACLE_MAX_LIFETIME + 1,
+                rand() % global_params.obstacle_max_lifetime + 1,
                 rand() % COLS,
                 rand() % LINES);
 
@@ -41,15 +41,15 @@ void obstacles_component(int read_fd, int write_fd)
     handle_pipe_read_error(bytes_size);
 
     // Initialize obstacles
-    Obstacle obstacles[NUM_OBSTACLES];
-    int free_slots = NUM_OBSTACLES;
-    for (int i = 0; i < NUM_OBSTACLES; ++i)
+    Obstacle obstacles[global_params.num_obstacles];
+    int free_slots = global_params.num_obstacles;
+    for (int i = 0; i < global_params.num_obstacles; ++i)
     {
         obstacles[i].lifetime = OBSTACLE_UNSET;
     }
 
     // Add initial obstacles
-    for (int i = 0; i < OBSTACLE_START_COUNT; ++i)
+    for (int i = 0; i < global_params.obstacle_start_count; ++i)
     {
         addObstacle(COLS, LINES, obstacles, &free_slots);
     }
@@ -57,7 +57,7 @@ void obstacles_component(int read_fd, int write_fd)
     while (1)
     {
         // Check for expired obstacles
-        for (int i = 0; i < NUM_OBSTACLES; ++i)
+        for (int i = 0; i < global_params.num_obstacles; ++i)
         {
             if (obstacles[i].lifetime == 0)
             {
@@ -74,12 +74,12 @@ void obstacles_component(int read_fd, int write_fd)
         if (free_slots > 0)
         {
             // with a chance of 1 in P add an obstacle
-            if (rand() % OBSTACLE_SPAWN_CHANCE == 0)
+            if (rand() % global_params.obstacle_spawn_chance == 0)
                 addObstacle(COLS, LINES, obstacles, &free_slots);
         }
 
         // Send obstacles to blackboard
-        bytes_size = write(write_fd, obstacles, sizeof(Obstacle) * NUM_OBSTACLES);
+        bytes_size = write(write_fd, obstacles, sizeof(Obstacle) * global_params.num_obstacles);
         handle_pipe_write_error(bytes_size);
 
         sleep(1); // Sleep for 1 second

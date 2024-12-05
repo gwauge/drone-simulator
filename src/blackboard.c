@@ -30,18 +30,18 @@ void init_ncurses()
 void draw_drone(Drone *drone)
 {
 	attron(COLOR_PAIR(DRONE_PAIR));
-	mvprintw(drone->y, drone->x, DRONE_SYMBOL);
+	mvprintw(drone->y, drone->x, &global_params.drone_symbol);
 	attroff(COLOR_PAIR(DRONE_PAIR));
 }
 
 void draw_obstacles(Obstacle *obstacles)
 {
 	attron(COLOR_PAIR(OBSTACLE_PAIR));
-	for (int i = 0; i < NUM_OBSTACLES; i++)
+	for (int i = 0; i < global_params.num_obstacles; i++)
 	{
 		if (obstacles[i].lifetime != OBSTACLE_UNSET)
 		{
-			mvprintw(obstacles[i].y, obstacles[i].x, OBSTACLE_SYMBOL);
+			mvprintw(obstacles[i].y, obstacles[i].x, &global_params.obstacle_symbol);
 		}
 	}
 	attroff(COLOR_PAIR(OBSTACLE_PAIR));
@@ -50,7 +50,7 @@ void draw_obstacles(Obstacle *obstacles)
 void draw_targets(Target *targets)
 {
 	attron(COLOR_PAIR(TARGET_PAIR));
-	for (int i = 0; i < NUM_TARGETS; i++)
+	for (int i = 0; i < global_params.num_targets; i++)
 	{
 		if (targets[i].number != TARGET_UNSET)
 		{
@@ -138,7 +138,7 @@ void blackboard(
 	pid_t pid = getpid();
 
 	int ch;
-	if (DEBUG)
+	if (global_params.debug)
 	{
 		COLS = 150;
 		LINES = 70;
@@ -230,7 +230,7 @@ void blackboard(
 		int ready_count = select(max_fd + 1, &read_set, NULL, NULL, NULL);
 		handle_select_error(ready_count);
 
-		if (!DEBUG)
+		if (!global_params.debug)
 			clear(); // Clear the screen
 
 		// Check which file descriptors are ready
@@ -247,7 +247,7 @@ void blackboard(
 
 					// check for target collisions
 					int collision_idx = -1;
-					for (int i = 0; i < NUM_TARGETS; i++)
+					for (int i = 0; i < global_params.num_targets; i++)
 					{
 						if (world_state.targets[i].number != TARGET_UNSET)
 						{
@@ -261,7 +261,7 @@ void blackboard(
 						}
 					}
 
-					if (DEBUG)
+					if (global_params.debug)
 					{
 						printf("[drone] updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
 							   world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
@@ -286,24 +286,24 @@ void blackboard(
 				}
 				else if (fd == obstacle_process->child_to_parent.read_fd)
 				{
-					bytes_size = read(fd, &world_state.obstacles, sizeof(Obstacle) * NUM_OBSTACLES);
+					bytes_size = read(fd, &world_state.obstacles, sizeof(Obstacle) * global_params.num_obstacles);
 					handle_pipe_read_error(bytes_size);
 
-					if (DEBUG)
+					if (global_params.debug)
 						printf("[obstacles] updated\n");
 				}
 				else if (fd == targets_process->child_to_parent.read_fd)
 				{
-					bytes_size = read(fd, &world_state.targets, sizeof(Target) * NUM_TARGETS);
+					bytes_size = read(fd, &world_state.targets, sizeof(Target) * global_params.num_targets);
 					handle_pipe_read_error(bytes_size);
 
-					if (DEBUG)
+					if (global_params.debug)
 						printf("[targets] updated\n");
 				}
 			}
 		}
 
-		if (!DEBUG)
+		if (!global_params.debug)
 		{
 			display(&world_state);
 			mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
@@ -315,6 +315,6 @@ void blackboard(
 		rotate_fds(read_fds, NUM_COMPONENTS);
 	}
 
-	if (!DEBUG)
+	if (!global_params.debug)
 		endwin(); // Close ncurses mode
 }

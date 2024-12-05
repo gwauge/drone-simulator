@@ -35,9 +35,27 @@ set(SRCS
 # Create a library target for the source files
 add_library(dronesim_lib ${SRCS})
 
+# FetchContent module
+include(FetchContent)
+
+# Fetch cJSON
+FetchContent_Declare(
+  cjson
+  GIT_REPOSITORY https://github.com/DaveGamble/cJSON.git
+  GIT_TAG v1.7.18
+)
+
+FetchContent_MakeAvailable(cjson)
+
+# Include cJSON directory
+include_directories(${cjson_SOURCE_DIR})
+
+# Link cJSON to the library
+target_link_libraries(dronesim_lib cjson)
+
 # Add executable & link libraries
 add_executable(dronesim src/main.c)
-target_link_libraries(dronesim dronesim_lib ncurses m)
+target_link_libraries(dronesim dronesim_lib ncurses m cjson)
 
 # Add compiler flags
 target_compile_options(dronesim PRIVATE -Wall -Wextra)

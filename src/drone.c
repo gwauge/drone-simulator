@@ -9,12 +9,12 @@ Drone make_drone(float x, float y, float vx, float vy)
 void update_drone_position(Drone *drone, float fx, float fy)
 {
 	// Update velocities based on force and damping
-	drone->vx += (fx - DAMPING * drone->vx) / MASS * TIME_STEP;
-	drone->vy += (fy - DAMPING * drone->vy) / MASS * TIME_STEP;
+	drone->vx += (fx - global_params.damping * drone->vx) / global_params.mass * global_params.time_step;
+	drone->vy += (fy - global_params.damping * drone->vy) / global_params.mass * global_params.time_step;
 
 	// Update positions based on velocity
-	drone->x += drone->vx * TIME_STEP;
-	drone->y += drone->vy * TIME_STEP;
+	drone->x += drone->vx * global_params.time_step;
+	drone->y += drone->vy * global_params.time_step;
 }
 
 float calculate_repulsive_force(Obstacle *obstacle, Drone *drone)
@@ -25,9 +25,9 @@ float calculate_repulsive_force(Obstacle *obstacle, Drone *drone)
 	float distance = sqrt(dx * dx + dy * dy);
 
 	// Apply repulsion only within a certain radius
-	if (distance < REPULSION_RADIUS && distance > 0)
+	if (distance < global_params.repulsion_radius && distance > 0)
 	{
-		float force_magnitude = ETA * (1.0 / distance - 1.0 / REPULSION_RADIUS) / (distance * distance);
+		float force_magnitude = global_params.eta * (1.0 / distance - 1.0 / global_params.repulsion_radius) / (distance * distance);
 		return force_magnitude;
 	}
 	return 0.0;
@@ -93,13 +93,13 @@ void drone_component(int read_fd, int write_fd)
 
 				// convert input into control forces
 				if (world_state.input.n)
-					force_y -= COMMAND_FORCE;
+					force_y -= global_params.command_force;
 				if (world_state.input.s)
-					force_y += COMMAND_FORCE;
+					force_y += global_params.command_force;
 				if (world_state.input.e)
-					force_x += COMMAND_FORCE;
+					force_x += global_params.command_force;
 				if (world_state.input.w)
-					force_x -= COMMAND_FORCE;
+					force_x -= global_params.command_force;
 				if (world_state.input.reset)
 				{
 					drone.vx = 0;
@@ -111,7 +111,7 @@ void drone_component(int read_fd, int write_fd)
 		}
 
 		// Update drone position based on control forces
-		for (int i = 0; i < NUM_OBSTACLES; i++)
+		for (int i = 0; i < global_params.num_obstacles; i++)
 		{
 			Obstacle obstacle = world_state.obstacles[i];
 			if (obstacle.lifetime == OBSTACLE_UNSET)
@@ -149,6 +149,6 @@ void drone_component(int read_fd, int write_fd)
 		force_y = 0.0;
 
 		// Simulate time step
-		usleep(TIME_STEP * 500000); // Convert TIME_STEP to microseconds
+		usleep(global_params.time_step * 500000); // Convert TIME_STEP to microseconds
 	}
 }
