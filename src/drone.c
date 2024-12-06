@@ -87,10 +87,6 @@ void drone_component(int read_fd, int write_fd)
 
 				received = 1;
 
-				// printf(
-				// 	"Drone received: n=%d, e=%d, s=%d, w=%d, reset=%d\n",
-				// 	input.n, input.e, input.s, input.w, input.reset);
-
 				// convert input into control forces
 				if (world_state.input.n)
 					force_y -= global_params.command_force;

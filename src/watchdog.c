@@ -95,6 +95,8 @@ void watchdog_component(int read_fd, int write_fd)
 
         active = check_logfile(pids);
 
+        printf("[watchdog internal] active: %d\n", active);
+
         // send activity status to parent
         bytes_size = write(write_fd, &active, sizeof(int));
         handle_pipe_write_error(bytes_size);

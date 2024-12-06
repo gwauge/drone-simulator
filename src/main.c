@@ -7,6 +7,7 @@
 #include "drone.h"
 #include "obstacles.h"
 #include "targets.h"
+#include "keyboard.h"
 
 Process processes[NUM_COMPONENTS];
 
@@ -58,6 +59,9 @@ int main()
     Process targets_process = create_process("targets", targets_component);
     processes[3] = targets_process;
 
+    Process keyboard_process = create_process("keyboard", keyboard_component);
+    processes[4] = keyboard_process;
+
     // Fork processes
     for (int i = 0; i < NUM_COMPONENTS; i++)
     {
@@ -67,17 +71,34 @@ int main()
     // === PARENT ===
     signal(SIGINT, shutdown);
 
+    if (global_params.debug)
+    {
+        printf("Debug mode enabled\n");
+
+        // print all processes and their PIDs
+        for (int i = 0; i < NUM_COMPONENTS; i++)
+        {
+            printf("Process %s has PID %d\n", processes[i].name, processes[i].pid);
+        }
+    }
+
     // Communicate with watchdog
     pid_t pids[NUM_COMPONENTS];
     // create list of all pids
     for (int i = 0; i < NUM_COMPONENTS; i++)
     {
+        // copy value to pids array
         pids[i] = processes[i].pid;
     }
     bytes_size = write(watchdog_process.parent_to_child.write_fd, &pids, sizeof(pids));
     handle_pipe_write_error(bytes_size);
 
-    blackboard(&watchdog_process, &drone_process, &obstacle_process, &targets_process);
+    blackboard(
+        &processes[0],  // watchdog
+        &processes[1],  // drone
+        &processes[2],  // obstacles
+        &processes[3],  // targets
+        &processes[4]); // keyboard
 
     shutdown();
 

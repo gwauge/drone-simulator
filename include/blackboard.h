@@ -22,4 +22,5 @@ void blackboard(
     Process *watchdog_process,
     Process *drone_process,
     Process *obstacle_process,
-    Process *targets_process);
+    Process *targets_process,
+    Process *keyboard_process);

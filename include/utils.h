@@ -16,7 +16,7 @@
 
 #include <cJSON.h>
 
-#define NUM_COMPONENTS 4
+#define NUM_COMPONENTS 5
 #define OBSTACLES_MAX_NUMBER 256
 #define TARGETS_MAX_NUMBER 256
 

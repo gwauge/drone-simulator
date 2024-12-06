@@ -30,6 +30,7 @@ set(SRCS
     src/blackboard.c
     src/pipes.c
     src/utils.c
+    src/keyboard.c
 )
 
 # Create a library target for the source files

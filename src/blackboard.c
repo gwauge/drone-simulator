@@ -106,7 +106,8 @@ void blackboard(
 	Process *watchdog_process,
 	Process *drone_process,
 	Process *obstacle_process,
-	Process *targets_process)
+	Process *targets_process,
+	Process *keyboard_process)
 {
 	size_t bytes_size;
 
@@ -118,6 +119,7 @@ void blackboard(
 	read_fds[1] = drone_process->child_to_parent.read_fd;
 	read_fds[2] = obstacle_process->child_to_parent.read_fd;
 	read_fds[3] = targets_process->child_to_parent.read_fd;
+	read_fds[4] = keyboard_process->child_to_parent.read_fd;
 
 	// find max fd
 	for (int i = 0; i < NUM_COMPONENTS; i++)
@@ -159,6 +161,8 @@ void blackboard(
 
 	int counter = 0;
 
+	struct timeval timeout;
+
 	while (1)
 	{
 		counter++;
@@ -169,54 +173,14 @@ void blackboard(
 			break;
 		}
 
-		// handle user input
-		ch = getch(); // Capture user input
-		if (ch == 'q')
-		{
-			printf("Received Q input\n");
-			break; // Exit if 'q' is pressed
-		}
-
-		switch (ch)
-		{
-		case 'w':
-			world_state.input.n = 1;
-			world_state.input.w = 1;
-			break;
-		case 'e':
-			world_state.input.n = 1;
-			break;
-		case 'r':
-			world_state.input.n = 1;
-			world_state.input.e = 1;
-			break;
-		case 's':
-			world_state.input.w = 1;
-			break;
-		case 'd':
-			world_state.input.reset = 1;
-			break;
-		case 'f':
-			world_state.input.e = 1;
-			break;
-		case 'x':
-			world_state.input.s = 1;
-			world_state.input.w = 1;
-			break;
-		case 'c':
-			world_state.input.s = 1;
-			break;
-		case 'v':
-			world_state.input.s = 1;
-			world_state.input.e = 1;
-			break;
-		}
-
 		// Send input to Drone process
 		bytes_size = write(drone_process->parent_to_child.write_fd, &world_state, sizeof(WorldState));
 		handle_pipe_write_error(bytes_size);
 
 		reset_input(&world_state.input);
+
+		timeout.tv_sec = 0;
+		timeout.tv_usec = 10000; // 10ms
 
 		// select file descriptors
 		FD_ZERO(&read_set);
@@ -226,12 +190,12 @@ void blackboard(
 			FD_SET(read_fds[i], &read_set);
 		}
 
-		// Wait for data to be ready
-		int ready_count = select(max_fd + 1, &read_set, NULL, NULL, NULL);
-		handle_select_error(ready_count);
-
 		if (!global_params.debug)
 			clear(); // Clear the screen
+
+		// Wait for data to be ready
+		int ready_count = select(max_fd + 1, &read_set, NULL, NULL, &timeout);
+		handle_select_error(ready_count);
 
 		// Check which file descriptors are ready
 		for (int i = 0; i < NUM_COMPONENTS; ++i)
@@ -261,15 +225,15 @@ void blackboard(
 						}
 					}
 
-					if (global_params.debug)
-					{
-						printf("[drone] updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
-							   world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
-						if (collision_idx >= 0)
-						{
-							printf("\tCollision detected with target %d\n", collision_idx);
-						}
-					}
+					// if (global_params.debug)
+					// {
+					// 	printf("[drone] updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
+					// 		   world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
+					// 	if (collision_idx >= 0)
+					// 	{
+					// 		printf("\tCollision detected with target %d\n", collision_idx);
+					// 	}
+					// }
 
 					if (collision_idx >= 0)
 					{
@@ -283,6 +247,9 @@ void blackboard(
 					// Read watchdog message
 					bytes_size = read(fd, &active, sizeof(active));
 					handle_pipe_read_error(bytes_size);
+
+					if (global_params.debug)
+						printf("[watchdog] active: %d\n", active);
 				}
 				else if (fd == obstacle_process->child_to_parent.read_fd)
 				{
@@ -299,6 +266,61 @@ void blackboard(
 
 					if (global_params.debug)
 						printf("[targets] updated\n");
+				}
+				else if (fd == keyboard_process->child_to_parent.read_fd)
+				{
+					// Read keyboard input
+					bytes_size = read(fd, &ch, sizeof(ch));
+					handle_pipe_read_error(bytes_size);
+
+					if (global_params.debug)
+						printf("[keyboard] Received input: %c\n", ch);
+
+					if (ch == 'q')
+					{
+						active = 0; // Exit the main loop
+					}
+					else if (ch == 'o')
+					{
+						printf("Terminating obstacles process %d\n", obstacle_process->pid);
+						kill(obstacle_process->pid, SIGINT);
+					}
+
+					// handle user input
+					switch (ch)
+					{
+					case 'w':
+						world_state.input.n = 1;
+						world_state.input.w = 1;
+						break;
+					case 'e':
+						world_state.input.n = 1;
+						break;
+					case 'r':
+						world_state.input.n = 1;
+						world_state.input.e = 1;
+						break;
+					case 's':
+						world_state.input.w = 1;
+						break;
+					case 'd':
+						world_state.input.reset = 1;
+						break;
+					case 'f':
+						world_state.input.e = 1;
+						break;
+					case 'x':
+						world_state.input.s = 1;
+						world_state.input.w = 1;
+						break;
+					case 'c':
+						world_state.input.s = 1;
+						break;
+					case 'v':
+						world_state.input.s = 1;
+						world_state.input.e = 1;
+						break;
+					}
 				}
 			}
 		}
