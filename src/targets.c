@@ -81,6 +81,7 @@ void targets_component(int read_fd, int write_fd)
 
     Drone drone;
 
+    int collision_idx;
     while (1)
     {
         FD_ZERO(&readfds);
@@ -98,7 +99,6 @@ void targets_component(int read_fd, int write_fd)
         {
             if (FD_ISSET(read_fd, &readfds))
             {
-                int collision_idx;
                 bytes_size = read(read_fd, &collision_idx, sizeof(int));
                 handle_pipe_read_error(bytes_size);
 

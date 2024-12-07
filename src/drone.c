@@ -129,6 +129,31 @@ void drone_component(int read_fd, int write_fd)
 			}
 		}
 
+		// Create virtual obstacles at the borders
+		Obstacle borders[4] = {};
+		borders[0] = make_obstacle(0, drone.x, 0);		   // Top border
+		borders[1] = make_obstacle(0, COLS - 1, drone.y);  // Right border
+		borders[2] = make_obstacle(0, drone.x, LINES - 1); // Bottom border
+		borders[3] = make_obstacle(0, 0, drone.y);		   // Left border
+
+		for (int i = 0; i < 4; i++)
+		{
+			Obstacle obstacle = borders[i];
+
+			// Calculate repulsive force from obstacle
+			float repulsion_force = calculate_repulsive_force(&obstacle, &drone);
+
+			// Decompose repulsive force into x and y components
+			float dx = drone.x - obstacle.x;
+			float dy = drone.y - obstacle.y;
+			float distance = sqrt(dx * dx + dy * dy);
+			if (distance > 0)
+			{
+				force_x += repulsion_force * (dx / distance);
+				force_y += repulsion_force * (dy / distance);
+			}
+		}
+
 		// Update drone position based on control forces
 		update_drone_position(&drone, force_x, force_y);
 

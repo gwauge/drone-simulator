@@ -171,22 +171,23 @@ void blackboard(
 	int ch;
 	if (global_params.debug)
 	{
-		COLS = 150;
-		LINES = 70;
+		COLS = 157;
+		LINES = 39;
 	}
 	else
 	{
 		init_ncurses();
 	}
 
-	int height, width;
-	getmaxyx(stdscr, height, width);
+	int height = LINES;
+	int width = COLS;
 
-	int main_win_height = height - 5;
+	int inspection_win_height = 5;
+	int main_win_height = height - inspection_win_height;
 	int main_win_width = width;
 
 	WINDOW *main_win = newwin(main_win_height, main_win_width, 0, 0);
-	WINDOW *inspection_win = newwin(5, width, height - 5, 0);
+	WINDOW *inspection_win = newwin(inspection_win_height, width, height - inspection_win_height, 0);
 
 	int active = 1; // boolean indicating if all processes are active
 
@@ -377,7 +378,15 @@ void blackboard(
 		{
 			// update inspection window
 			wclear(inspection_win);
-			// wprintw("Main window size: %d x %d\n", main_win_height, main_win_width);
+
+			// print line of '=' to visually separate the main window from the inspection window
+			for (int i = 0; i < width - 1; i++)
+			{
+				wprintw(inspection_win, "=");
+			}
+			wprintw(inspection_win, "\n");
+
+			wprintw(inspection_win, "Main window size: %d x %d\n", main_win_height, main_win_width);
 			wprintw(inspection_win, "[drone] updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
 					world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
 			double score = compute_score(counter, collision_counter, 0, distance_traveled);
