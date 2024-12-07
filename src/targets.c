@@ -103,11 +103,12 @@ void targets_component(int read_fd, int write_fd)
                 handle_pipe_read_error(bytes_size);
 
                 if (collision_idx >= 0 && collision_idx < global_params.num_targets && targets[collision_idx].number != TARGET_UNSET)
+                {
                     if (global_params.debug)
                     {
                         printf("[targets] received detected collision with target %d\n", collision_idx);
                     }
-                {
+
                     // Reset target
                     targets[collision_idx].number = TARGET_UNSET;
                     free_slots += 1;

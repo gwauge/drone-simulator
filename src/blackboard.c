@@ -27,47 +27,47 @@ void init_ncurses()
 	timeout(0); // Non-blocking input
 }
 
-void draw_drone(Drone *drone)
+void draw_drone(WINDOW *win, Drone *drone)
 {
-	attron(COLOR_PAIR(DRONE_PAIR));
-	mvprintw(drone->y, drone->x, &global_params.drone_symbol);
-	attroff(COLOR_PAIR(DRONE_PAIR));
+	wattron(win, COLOR_PAIR(DRONE_PAIR));
+	mvwprintw(win, drone->y, drone->x, &global_params.drone_symbol);
+	wattroff(win, COLOR_PAIR(DRONE_PAIR));
 }
 
-void draw_obstacles(Obstacle *obstacles)
+void draw_obstacles(WINDOW *win, Obstacle *obstacles)
 {
-	attron(COLOR_PAIR(OBSTACLE_PAIR));
+	wattron(win, COLOR_PAIR(OBSTACLE_PAIR));
 	for (int i = 0; i < global_params.num_obstacles; i++)
 	{
 		if (obstacles[i].lifetime != OBSTACLE_UNSET)
 		{
-			mvprintw(obstacles[i].y, obstacles[i].x, &global_params.obstacle_symbol);
+			mvwprintw(win, obstacles[i].y, obstacles[i].x, &global_params.obstacle_symbol);
 		}
 	}
-	attroff(COLOR_PAIR(OBSTACLE_PAIR));
+	wattroff(win, COLOR_PAIR(OBSTACLE_PAIR));
 }
 
-void draw_targets(Target *targets)
+void draw_targets(WINDOW *win, Target *targets)
 {
-	attron(COLOR_PAIR(TARGET_PAIR));
+	wattron(win, COLOR_PAIR(TARGET_PAIR));
 	for (int i = 0; i < global_params.num_targets; i++)
 	{
 		if (targets[i].number != TARGET_UNSET)
 		{
-			mvprintw(targets[i].y, targets[i].x, "%d", targets[i].number);
+			mvwprintw(win, targets[i].y, targets[i].x, "%d", targets[i].number);
 		}
 	}
-	attroff(COLOR_PAIR(TARGET_PAIR));
+	wattroff(win, COLOR_PAIR(TARGET_PAIR));
 }
 
 // Function to display the obstacle and drone
-void display(WorldState *world_state)
+void display(WINDOW *win, WorldState *world_state)
 {
-	clear();
-	draw_drone(&world_state->drone);		// Display drone
-	draw_obstacles(world_state->obstacles); // Display obstacles
-	draw_targets(world_state->targets);		// Display targets
-	refresh();
+	wclear(win);
+	draw_drone(win, &world_state->drone);		 // Display drone
+	draw_obstacles(win, world_state->obstacles); // Display obstacles
+	draw_targets(win, world_state->targets);	 // Display targets
+	wrefresh(win);
 }
 
 void reset_input(Input *input)
@@ -79,7 +79,7 @@ void reset_input(Input *input)
 	input->reset = 0;
 }
 
-void send_map_size(Process *process)
+void send_map_size(Process *process, int LINES, int COLS)
 {
 	size_t bytes_size;
 	// send map size once at the beginning
@@ -87,6 +87,35 @@ void send_map_size(Process *process)
 	handle_pipe_write_error(bytes_size);
 	bytes_size = write(process->parent_to_child.write_fd, &LINES, sizeof(int));
 	handle_pipe_write_error(bytes_size);
+}
+
+double compute_score(
+	double time_elapsed,
+	int targets_reached,
+	int obstacles_encountered,
+	double distance_traveled)
+{
+	// Define weights for each factor
+	const double time_weight = 0.1;
+	const double targets_weight = 10.0;
+	const double obstacles_weight = -5.0;
+	const double distance_weight = 0.5;
+	const double penalty_weight = -20.0;
+
+	// Compute the score
+	double score = 0.0;
+	score += time_weight * time_elapsed;
+	score += targets_weight * targets_reached;
+	score += obstacles_weight * obstacles_encountered;
+	score += distance_weight * distance_traveled;
+
+	// Add penalties if any (example: if obstacles_encountered > 5, apply a penalty)
+	if (obstacles_encountered > 5)
+	{
+		score += penalty_weight;
+	}
+
+	return score;
 }
 
 void rotate_fds(int *fds, int count)
@@ -150,16 +179,28 @@ void blackboard(
 		init_ncurses();
 	}
 
+	int height, width;
+	getmaxyx(stdscr, height, width);
+
+	int main_win_height = height - 5;
+	int main_win_width = width;
+
+	WINDOW *main_win = newwin(main_win_height, main_win_width, 0, 0);
+	WINDOW *inspection_win = newwin(5, width, height - 5, 0);
+
 	int active = 1; // boolean indicating if all processes are active
 
+	Drone old_drone;
 	WorldState world_state;
 	reset_input(&world_state.input);
 
-	send_map_size(drone_process);
-	send_map_size(obstacle_process);
-	send_map_size(targets_process);
+	send_map_size(drone_process, main_win_height, main_win_width);
+	send_map_size(obstacle_process, main_win_height, main_win_width);
+	send_map_size(targets_process, main_win_height, main_win_width);
 
 	int counter = 0;
+	int collision_counter = 0;
+	double distance_traveled = 0;
 
 	struct timeval timeout;
 
@@ -205,9 +246,15 @@ void blackboard(
 			{
 				if (fd == drone_process->child_to_parent.read_fd)
 				{
+					// save old drone state
+					old_drone = world_state.drone;
+
 					// Read drone position
 					bytes_size = read(fd, &world_state.drone, sizeof(Drone));
 					handle_pipe_read_error(bytes_size);
+
+					// calculate distance traveled
+					distance_traveled += sqrt(pow(world_state.drone.x - old_drone.x, 2) + pow(world_state.drone.y - old_drone.y, 2));
 
 					// check for target collisions
 					int collision_idx = -1;
@@ -220,20 +267,21 @@ void blackboard(
 								(int)world_state.drone.y == world_state.targets[i].y)
 							{
 								collision_idx = i;
+								collision_counter++;
 								break;
 							}
 						}
 					}
 
-					// if (global_params.debug)
-					// {
-					// 	printf("[drone] updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
-					// 		   world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
-					// 	if (collision_idx >= 0)
-					// 	{
-					// 		printf("\tCollision detected with target %d\n", collision_idx);
-					// 	}
-					// }
+					if (global_params.debug)
+					{
+						printf("[drone] updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
+							   world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
+						if (collision_idx >= 0)
+						{
+							printf("\tCollision detected with target %d\n", collision_idx);
+						}
+					}
 
 					if (collision_idx >= 0)
 					{
@@ -327,10 +375,16 @@ void blackboard(
 
 		if (!global_params.debug)
 		{
-			display(&world_state);
-			mvprintw(0, 0, "Drone updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
-					 world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
-			refresh();
+			// update inspection window
+			wclear(inspection_win);
+			// wprintw("Main window size: %d x %d\n", main_win_height, main_win_width);
+			wprintw(inspection_win, "[drone] updated: Position (%.2f, %.2f), Velocity (%.2f, %.2f)\n",
+					world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
+			double score = compute_score(counter, collision_counter, 0, distance_traveled);
+			wprintw(inspection_win, "Score: %.2f\n", score);
+			wrefresh(inspection_win);
+
+			display(main_win, &world_state);
 		}
 
 		// Rotate file descriptors to ensure fairness
@@ -338,5 +392,9 @@ void blackboard(
 	}
 
 	if (!global_params.debug)
+	{
+		delwin(main_win);
+		delwin(inspection_win);
 		endwin(); // Close ncurses mode
+	}
 }
