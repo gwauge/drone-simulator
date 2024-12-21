@@ -25,18 +25,15 @@ include_directories(include)
 
 # Source files
 set(SRCS
-    src/drone.c
-    src/watchdog.c
-    src/obstacles.c
-    src/targets.c
-    src/blackboard.c
-    src/pipes.c
-    src/utils.c
-    src/keyboard.c
+    src/drone.cpp
+    src/watchdog.cpp
+    src/obstacles.cpp
+    src/targets.cpp
+    src/blackboard.cpp
+    src/pipes.cpp
+    src/utils.cpp
+    src/keyboard.cpp
 )
-
-# set all source files to c++
-set_source_files_properties(${SRCS} src/main.c PROPERTIES LANGUAGE CXX)
 
 # Create a library target for the source files
 add_library(dronesim_lib ${SRCS})
@@ -60,27 +57,12 @@ include_directories(${cjson_SOURCE_DIR})
 target_link_libraries(dronesim_lib cjson)
 
 # Add executable & link libraries
-add_executable(dronesim src/main.c)
+add_executable(dronesim src/main.cpp)
 target_link_libraries(dronesim dronesim_lib ncurses m cjson)
 
 # Add compiler flags
 target_compile_options(dronesim PRIVATE -Wall -Wextra)
 
-#[[
-# === TESTING ===
-# Add executable & link libraries
-add_executable(runTests tests/test_main.c)
-target_link_libraries(runTests PRIVATE dronesim_lib ncurses m)
-
-# Enable testing
-enable_testing()
-
-# Register the test with CTest
-add_test(
-    NAME DroneSimTest
-    COMMAND $<TARGET_FILE:runTests>
-)
-]]
 
 # === MISC ===
 # Clean files

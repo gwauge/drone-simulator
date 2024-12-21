@@ -1,4 +1,4 @@
-#include "pipes.h"
+#include "pipes.hpp"
 
 void set_nonblocking(int fd)
 {

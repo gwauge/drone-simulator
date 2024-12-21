@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "utils.hpp"
 
 #define LOGFILE "watchdog.log"
 #define DT 3 // Inactivity threshold in seconds

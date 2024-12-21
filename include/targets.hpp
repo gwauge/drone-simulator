@@ -6,8 +6,8 @@
 #include <stdio.h>
 #include <sys/select.h>
 
-#include "utils.h"
-#include "pipes.h"
+#include "utils.hpp"
+#include "pipes.hpp"
 
 // #define TARGET_START_COUNT 5
 #define TARGET_UNSET -1

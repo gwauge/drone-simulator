@@ -1,4 +1,4 @@
-#include "watchdog.h"
+#include "watchdog.hpp"
 
 int check_logfile(pid_t *pids)
 {

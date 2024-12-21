@@ -1,13 +1,13 @@
 #include <sys/wait.h> // for wait
 
-#include "utils.h"
-#include "pipes.h"
-#include "blackboard.h"
-#include "watchdog.h"
-#include "drone.h"
-#include "obstacles.h"
-#include "targets.h"
-#include "keyboard.h"
+#include "utils.hpp"
+#include "pipes.hpp"
+#include "blackboard.hpp"
+#include "watchdog.hpp"
+#include "drone.hpp"
+#include "obstacles.hpp"
+#include "targets.hpp"
+#include "keyboard.hpp"
 
 Process processes[NUM_COMPONENTS];
 

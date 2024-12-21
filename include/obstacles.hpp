@@ -5,8 +5,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "utils.h"
-#include "pipes.h"
+#include "utils.hpp"
+#include "pipes.hpp"
 
 // #define OBSTACLE_MAX_LIFETIME 50
 // #define OBSTACLE_START_COUNT 5

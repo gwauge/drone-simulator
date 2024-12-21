@@ -1,4 +1,4 @@
-#include "keyboard.h"
+#include "keyboard.hpp"
 
 // Global flag for graceful termination
 volatile sig_atomic_t sigint_received = 0;

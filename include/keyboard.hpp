@@ -5,8 +5,8 @@
 #include <signal.h>
 #include <sys/select.h>
 
-#include "utils.h"
-#include "pipes.h"
+#include "utils.hpp"
+#include "pipes.hpp"
 
 #define POLL_INTERVAL 100000 // 100ms
 

@@ -1,4 +1,4 @@
-#include "obstacles.h"
+#include "obstacles.hpp"
 
 Obstacle make_obstacle(int lifetime, int x, int y)
 {

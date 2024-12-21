@@ -1,4 +1,4 @@
-#include "drone.h"
+#include "drone.hpp"
 
 Drone make_drone(float x, float y, float vx, float vy)
 {

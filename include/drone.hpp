@@ -10,9 +10,9 @@
 #include <sys/types.h>
 #include <sys/select.h>
 
-#include "utils.h"
-#include "pipes.h"
-#include "obstacles.h"
+#include "utils.hpp"
+#include "pipes.hpp"
+#include "obstacles.hpp"
 
 // struct Drone;
 
