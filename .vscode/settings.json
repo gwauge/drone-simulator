@@ -1,9 +1,3 @@
 {
-    "files.associations": {
-        "pipes.h": "c",
-        "watchdog.h": "c",
-        "blackboard.h": "c",
-        "obstacles.h": "c",
-        "drone.h": "c",
-    }
+    "files.associations": {}
 }

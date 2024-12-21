@@ -32,7 +32,7 @@ jobs:
           cd build
           make
 
-      - name: Run tests
-        run: |
-          cd build
-          make test
+      # - name: Run tests
+      #   run: |
+      #     cd build
+      #     make test

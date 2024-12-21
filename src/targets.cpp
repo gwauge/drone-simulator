@@ -1,4 +1,4 @@
-#include "targets.h"
+#include "targets.hpp"
 
 Target make_target(int number, int x, int y)
 {

@@ -1,4 +1,4 @@
-#include "utils.h"
+#include "utils.hpp"
 
 #define LOGFILE "watchdog.log"
 #define DT 3 // Inactivity threshold in seconds
@@ -111,7 +111,7 @@ void get_current_time(char *buffer, size_t size)
     strftime(buffer, size, "%Y-%m-%d %H:%M:%S", t);
 }
 
-void signal_handler()
+void signal_handler(int sig)
 {
     char buffer[64];
     get_current_time(buffer, sizeof(buffer));

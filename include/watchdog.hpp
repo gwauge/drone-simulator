@@ -1,7 +1,7 @@
 #pragma once
 
-#include "utils.h"
-#include "pipes.h"
+#include "utils.hpp"
+#include "pipes.hpp"
 
 #define DT 3 // Inactivity threshold in seconds
 

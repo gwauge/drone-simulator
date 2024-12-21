@@ -1,4 +1,4 @@
-#include "watchdog.h"
+#include "watchdog.hpp"
 
 int check_logfile(pid_t *pids)
 {
@@ -86,7 +86,7 @@ void watchdog_component(int read_fd, int write_fd)
 
     while (1)
     {
-        signal_handler();
+        signal_handler(SIGUSR1);
         for (int i = 1; i < NUM_COMPONENTS; i++)
         {
             kill(pids[i], SIGUSR1);

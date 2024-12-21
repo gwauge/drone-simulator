@@ -1,4 +1,4 @@
-# Drone simulator written in C
+# Drone simulator written in C++
 
 ## How to run
 ### Using pre-built binary
@@ -7,11 +7,12 @@
 ```bash
 chmod +x drone-simulator_linux_amd64
 ```
+- copy `appsettings.json` from GitHub
 - run binary
 
 ### Compiling source
 #### Requirements
-- `gcc` $\geq$ 12.3.0
+- `g++` $\geq$ 12.3.0
 - `cmake` $\geq$ 3.10
 
 #### Building

@@ -10,11 +10,11 @@
 #include <sys/types.h>
 #include <sys/select.h>
 
-#include "utils.h"
-#include "pipes.h"
-#include "obstacles.h"
+#include "utils.hpp"
+#include "pipes.hpp"
+#include "obstacles.hpp"
 
-struct Drone;
+// struct Drone;
 
 Drone make_drone(float x, float y, float vx, float vy);
 void update_drone_position(Drone *drone, float fx, float fy);

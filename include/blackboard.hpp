@@ -5,11 +5,11 @@
 #include <stdlib.h> // For exit
 #include <sys/select.h>
 
-#include "utils.h"
-#include "pipes.h"
-#include "drone.h"
-#include "obstacles.h"
-#include "targets.h"
+#include "utils.hpp"
+#include "pipes.hpp"
+#include "drone.hpp"
+#include "obstacles.hpp"
+#include "targets.hpp"
 
 void init_colors();
 void init_ncruses();

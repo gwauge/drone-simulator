@@ -1,17 +1,17 @@
 #include <sys/wait.h> // for wait
 
-#include "utils.h"
-#include "pipes.h"
-#include "blackboard.h"
-#include "watchdog.h"
-#include "drone.h"
-#include "obstacles.h"
-#include "targets.h"
-#include "keyboard.h"
+#include "utils.hpp"
+#include "pipes.hpp"
+#include "blackboard.hpp"
+#include "watchdog.hpp"
+#include "drone.hpp"
+#include "obstacles.hpp"
+#include "targets.hpp"
+#include "keyboard.hpp"
 
 Process processes[NUM_COMPONENTS];
 
-void shutdown()
+void shutdown(int sig)
 {
     printf("Shutting down all children...\n");
     // kill all child processes
@@ -37,7 +37,7 @@ int main()
 
     if (parse_parameters() != 0)
     {
-        shutdown();
+        shutdown(0);
         exit(EXIT_FAILURE);
     }
 
@@ -100,7 +100,7 @@ int main()
         &processes[3],  // targets
         &processes[4]); // keyboard
 
-    shutdown();
+    shutdown(0);
 
     return 0;
 }

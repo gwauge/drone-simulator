@@ -1,7 +1,7 @@
 #pragma once
 
-#define __USE_XOPEN
-#define _GNU_SOURCE
+// #define __USE_XOPEN
+// #define _GNU_SOURCE
 
 #include <unistd.h> // For usleep
 #include <stdlib.h> // For exit
@@ -148,6 +148,6 @@ void init_mutex();
 void cleanup_mutex();
 void write_log(const char *message);
 void get_current_time(char *buffer, size_t size);
-void signal_handler();
+void signal_handler(int sig);
 void register_signal_handler();
 void handle_select_error(int result);
