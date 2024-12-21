@@ -13,7 +13,7 @@
 #define TARGET_UNSET -1
 // #define TARGET_SPAWN_CHANCE 10 // 1 in P chance of spawning a new obstacle per time step if there are free slots
 
-struct Target;
+// struct Target;
 
 Target make_target(int number, int x, int y);
 void addTarget(int COLS, int LINES, Target *targets, int *free_slots, int *number);

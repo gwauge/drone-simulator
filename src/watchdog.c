@@ -86,7 +86,7 @@ void watchdog_component(int read_fd, int write_fd)
 
     while (1)
     {
-        signal_handler();
+        signal_handler(SIGUSR1);
         for (int i = 1; i < NUM_COMPONENTS; i++)
         {
             kill(pids[i], SIGUSR1);

@@ -13,7 +13,7 @@
 #define OBSTACLE_UNSET -1
 // #define OBSTACLE_SPAWN_CHANCE 5 // 1 in P chance of spawning a new obstacle per time step if there are free slots
 
-struct Obstacle;
+// struct Obstacle;
 
 Obstacle make_obstacle(int lifetime, int x, int y);
 void addObstacle(int COLS, int LINES, Obstacle *obstacles, int *free_slots);

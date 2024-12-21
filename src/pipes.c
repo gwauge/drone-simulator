@@ -108,7 +108,10 @@ Process create_process(char *name, void (*run)(int read_fd, int write_fd))
 
 void fork_process_and_run(Process *process)
 {
-    pid_t pid = fork_process(&process->parent_to_child, &process->child_to_parent);
+    pid_t pid = fork_process(
+        // &process->parent_to_child,
+        // &process->child_to_parent
+    );
     if (pid == 0)
     {
         // In child process

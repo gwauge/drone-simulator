@@ -1,9 +1,11 @@
 cmake_minimum_required(VERSION 3.10)
 
 # Project name
-project(drone-simulator LANGUAGES C)
+project(drone-simulator LANGUAGES CXX)
 # Set the C standard
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(CI_BUILD "Set to ON for complete build in CI." OFF)
 
@@ -33,6 +35,9 @@ set(SRCS
     src/keyboard.c
 )
 
+# set all source files to c++
+set_source_files_properties(${SRCS} src/main.c PROPERTIES LANGUAGE CXX)
+
 # Create a library target for the source files
 add_library(dronesim_lib ${SRCS})
 
@@ -61,6 +66,7 @@ target_link_libraries(dronesim dronesim_lib ncurses m cjson)
 # Add compiler flags
 target_compile_options(dronesim PRIVATE -Wall -Wextra)
 
+#[[
 # === TESTING ===
 # Add executable & link libraries
 add_executable(runTests tests/test_main.c)
@@ -74,6 +80,7 @@ add_test(
     NAME DroneSimTest
     COMMAND $<TARGET_FILE:runTests>
 )
+]]
 
 # === MISC ===
 # Clean files

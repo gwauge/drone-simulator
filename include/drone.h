@@ -14,7 +14,7 @@
 #include "pipes.h"
 #include "obstacles.h"
 
-struct Drone;
+// struct Drone;
 
 Drone make_drone(float x, float y, float vx, float vy);
 void update_drone_position(Drone *drone, float fx, float fy);
