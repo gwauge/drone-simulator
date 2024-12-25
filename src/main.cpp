@@ -31,9 +31,30 @@ void shutdown(int sig)
     cleanup_mutex();
 }
 
-int main()
+int main(int argc, char *argv[])
 {
     printf("Starting main process with PID %d\n", getpid());
+
+    std::string mode = "normal";
+
+    if (argc > 1)
+    {
+        if (strcmp(argv[1], "server") == 0)
+        {
+            mode = "server";
+        }
+        else if (strcmp(argv[1], "client") == 0)
+        {
+            mode = "client";
+        }
+        else
+        {
+            std::cerr << "Invalid mode. Use 'server' or 'client'." << std::endl;
+            exit(EXIT_FAILURE);
+        }
+    }
+
+    printf("Running in %s mode\n", mode.c_str());
 
     if (parse_parameters() != 0)
     {

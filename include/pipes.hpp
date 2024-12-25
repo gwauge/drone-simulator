@@ -48,5 +48,5 @@ void write_to_pipe(int write_fd, const char *message);
 // Read a message from the pipe
 void read_from_pipe(int read_fd, char *buffer, size_t buffer_size);
 
-Process create_process(char *name, void (*run)(int read_fd, int write_fd));
+Process create_process(const char *name, void (*run)(int read_fd, int write_fd));
 void fork_process_and_run(Process *process);

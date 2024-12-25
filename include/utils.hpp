@@ -6,8 +6,10 @@
 #include <unistd.h> // For usleep
 #include <stdlib.h> // For exit
 #include <fcntl.h>
-#include <stdio.h>
-#include <string.h>
+#include <cstdio>
+#include <iostream>
+#include <cstring>
+#include <string>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <signal.h>

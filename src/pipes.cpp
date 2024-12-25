@@ -94,7 +94,7 @@ void read_from_pipe(int read_fd, char *buffer, size_t buffer_size)
     buffer[bytes_read] = '\0'; // Null-terminate the string
 }
 
-Process create_process(char *name, void (*run)(int read_fd, int write_fd))
+Process create_process(const char *name, void (*run)(int read_fd, int write_fd))
 {
     Process process;
     strcpy(process.name, name);
