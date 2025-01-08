@@ -7,32 +7,67 @@ Obstacle make_obstacle(int lifetime, int x, int y)
 }
 
 // Add an obstacle at a random position with a random lifetime
-void addObstacle(int COLS, int LINES, Obstacle *obstacles, int *free_slots)
+void addObstacle(
+    int COLS,
+    int LINES,
+    std::vector<int32_t> &obstacles_x,
+    std::vector<int32_t> &obstacles_y,
+    std::vector<int32_t> &obstacles_lifetime)
 {
-    for (int i = 0; i < global_params.num_obstacles; i++)
-    {
-        if (obstacles[i].lifetime == OBSTACLE_UNSET)
-        {
-            obstacles[i] = make_obstacle(
-                rand() % global_params.obstacle_max_lifetime + 1,
-                rand() % COLS,
-                rand() % LINES);
+    obstacles_lifetime.push_back(rand() % global_params.obstacle_max_lifetime + 1);
+    obstacles_x.push_back(rand() % COLS);
+    obstacles_y.push_back(rand() % LINES);
+}
 
-            *free_slots -= 1;
-            break;
-        }
+std::atomic<bool> running(true);
+
+void my_signal_handler(int signal)
+{
+    if (signal == SIGINT)
+    {
+        running = false;
     }
+}
+
+void register_my_signal_handler()
+{
+    struct sigaction sa;
+    sa.sa_handler = my_signal_handler;
+    sigemptyset(&sa.sa_mask);
+    sa.sa_flags = 0;
+    sigaction(SIGINT, &sa, NULL);
 }
 
 void obstacles_component(int read_fd, int write_fd)
 {
     register_signal_handler();
 
+    // initialize obstacles
+    std::vector<int32_t> obstacles_x = std::vector<int32_t>();
+    std::vector<int32_t> obstacles_y = std::vector<int32_t>();
+    std::vector<int32_t> obstacles_lifetime = std::vector<int32_t>();
+
     srand(time(NULL));
+
+    // Initialize FastDDS
+    register_my_signal_handler();
+
+    DomainParticipantQos participantQos;
+    DomainParticipant *participant = DomainParticipantFactory::get_instance()->create_participant(0, participantQos);
+    TypeSupport type(new ObstaclesPubSubType());
+    type.register_type(participant);
+    std::string topic_name = "obstacles";
+    if (global_params.mode != 1)
+    {
+        topic_name += "_local";
+    }
+    Topic *topic = participant->create_topic(topic_name, "Obstacles", TOPIC_QOS_DEFAULT);
+    Publisher *publisher = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr);
+    DataWriter *writer = publisher->create_datawriter(topic, DATAWRITER_QOS_DEFAULT, nullptr);
 
     ssize_t bytes_size;
 
-    // Get terminal size
+    // Get terminal sizeÄ
     int COLS, LINES;
     bytes_size = read(read_fd, &COLS, sizeof(int));
     handle_pipe_read_error(bytes_size);
@@ -40,48 +75,47 @@ void obstacles_component(int read_fd, int write_fd)
     bytes_size = read(read_fd, &LINES, sizeof(int));
     handle_pipe_read_error(bytes_size);
 
-    // Initialize obstacles
-    Obstacle obstacles[global_params.num_obstacles];
-    int free_slots = global_params.num_obstacles;
-    for (int i = 0; i < global_params.num_obstacles; ++i)
-    {
-        obstacles[i].lifetime = OBSTACLE_UNSET;
-    }
-
     // Add initial obstacles
     for (int i = 0; i < global_params.obstacle_start_count; ++i)
     {
-        addObstacle(COLS, LINES, obstacles, &free_slots);
+        addObstacle(COLS, LINES, obstacles_x, obstacles_y, obstacles_lifetime);
     }
 
-    while (1)
+    Obstacles obstacles;
+    while (running)
     {
-        // Check for expired obstacles
-        for (int i = 0; i < global_params.num_obstacles; ++i)
+        // Check for expired obstacles and remove them
+        for (int i = 0; i < obstacles_lifetime.size();)
         {
-            if (obstacles[i].lifetime == 0)
+            if (obstacles_lifetime[i] <= 0)
             {
-                obstacles[i].lifetime = OBSTACLE_UNSET;
-                free_slots++;
+                obstacles_lifetime.erase(obstacles_lifetime.begin() + i);
+                obstacles_x.erase(obstacles_x.begin() + i);
+                obstacles_y.erase(obstacles_y.begin() + i);
             }
-            else if (obstacles[i].lifetime > 0)
+            else
             {
-                obstacles[i].lifetime--;
+                obstacles_lifetime[i]--;
+                ++i;
             }
         }
 
-        // Add new obstacles
-        if (free_slots > 0)
-        {
-            // with a chance of 1 in P add an obstacle
-            if (rand() % global_params.obstacle_spawn_chance == 0)
-                addObstacle(COLS, LINES, obstacles, &free_slots);
-        }
+        // with a chance of 1 in P add an obstacle
+        if (rand() % global_params.obstacle_spawn_chance == 0)
+            addObstacle(COLS, LINES, obstacles_x, obstacles_y, obstacles_lifetime);
 
-        // Send obstacles to blackboard
-        bytes_size = write(write_fd, obstacles, sizeof(Obstacle) * global_params.num_obstacles);
-        handle_pipe_write_error(bytes_size);
+        // send using DDS
+        obstacles.obstacles_x(obstacles_x);
+        obstacles.obstacles_y(obstacles_y);
+        obstacles.obstacles_number(obstacles_x.size());
+        writer->write(&obstacles);
 
-        sleep(1); // Sleep for 1 second
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Time step
     }
+
+    // Clean up
+    participant->delete_contained_entities();
+    DomainParticipantFactory::get_instance()->delete_participant(participant);
+    std::cout << "Successfully cleaned up obstacles component. Terminating now..." << std::endl;
+    exit(EXIT_SUCCESS);
 }

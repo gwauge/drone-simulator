@@ -5,7 +5,7 @@
 
 sem_t *log_mutex = NULL;
 
-Parameters global_params; // Define the global variable
+Params global_params; // Define the global variable
 
 int parse_parameters()
 {
@@ -32,6 +32,7 @@ int parse_parameters()
     }
 
     global_params.debug = cJSON_IsTrue(cJSON_GetObjectItemCaseSensitive(json, "DEBUG"));
+    global_params.mode = cJSON_GetObjectItemCaseSensitive(json, "MODE")->valueint;
     global_params.num_obstacles = cJSON_GetObjectItemCaseSensitive(json, "NUM_OBSTACLES")->valueint;
     if (global_params.num_obstacles > OBSTACLES_MAX_NUMBER)
     {

@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.10)
 # Project name
 project(drone-simulator LANGUAGES CXX)
 # Set the C standard
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -21,7 +21,7 @@ endif ()
 
 # === MAIN EXECUTABLE ===
 # Include directories
-include_directories(include)
+include_directories(include generated)
 
 # Source files
 set(SRCS
@@ -35,8 +35,11 @@ set(SRCS
     src/keyboard.cpp
 )
 
+# Source files generated from FastDDS idl
+file(GLOB GENERATED_SOURCES ${CMAKE_SOURCE_DIR}/generated/*.cxx)
+
 # Create a library target for the source files
-add_library(dronesim_lib ${SRCS})
+add_library(dronesim_lib ${SRCS} ${GENERATED_SOURCES})
 
 # FetchContent module
 include(FetchContent)
@@ -48,17 +51,21 @@ FetchContent_Declare(
   GIT_TAG v1.7.18
 )
 
+# Fetch dependencies
 FetchContent_MakeAvailable(cjson)
 
-# Include cJSON directory
+find_package(fastdds REQUIRED)
+find_package(fastcdr REQUIRED)
+
+# Include directory
 include_directories(${cjson_SOURCE_DIR})
 
-# Link cJSON to the library
-target_link_libraries(dronesim_lib cjson)
+# Link external libraries to the library
+target_link_libraries(dronesim_lib stdc++ cjson fastdds fastcdr)
 
 # Add executable & link libraries
 add_executable(dronesim src/main.cpp)
-target_link_libraries(dronesim dronesim_lib ncurses m cjson)
+target_link_libraries(dronesim dronesim_lib stdc++ ncurses m cjson fastdds fastcdr)
 
 # Add compiler flags
 target_compile_options(dronesim PRIVATE -Wall -Wextra)

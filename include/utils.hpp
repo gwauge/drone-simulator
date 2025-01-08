@@ -32,6 +32,9 @@ typedef struct
 {
     int debug;
 
+    // 0 = test, 1 = producer, 2 = consumer
+    int mode;
+
     int num_obstacles;
     char obstacle_symbol;
     int obstacle_max_lifetime;
@@ -50,18 +53,19 @@ typedef struct
     float time_step;
     float repulsion_radius;
     float eta;
-} Parameters;
+} Params;
 
-extern Parameters global_params;
+extern Params global_params;
 
 #define MAX_LINE_LENGTH 100
 #define MAX_FILE_SIZE 1024
 #define USE_MACRO_LOG 0
 
-static inline __attribute__((always_inline)) void logConfig(const Parameters *config)
+static inline __attribute__((always_inline)) void logConfig(const Params *config)
 {
-    printf("Parameters:\n");
+    printf("Params:\n");
     printf("\tDebug mode: %d\n", config->debug);
+    printf("\tMode: %d\n", config->mode);
 
     printf("\tNum obsbtacles: %d\n", config->num_obstacles);
     printf("\tObstacle max lifetime: %d\n", config->obstacle_max_lifetime);
@@ -144,6 +148,9 @@ typedef struct
 } WorldState;
 
 #define LOGFILE "watchdog.log"
+
+#define OBSTACLE_TOPIC = "obstacles";
+#define TARGET_TOPIC = "targets";
 
 extern sem_t *log_mutex;
 void init_mutex();

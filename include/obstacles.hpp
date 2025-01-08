@@ -1,9 +1,24 @@
 #pragma once
 
-#include <time.h>
+#include <ctime>
 #include <unistd.h>
-#include <stdlib.h>
+#include <cstdlib>
 #include <stdio.h>
+
+#include <iostream>
+#include <vector>
+#include <chrono>
+#include <thread>
+
+#include <fastdds/dds/domain/DomainParticipantFactory.hpp>
+#include <fastdds/dds/domain/DomainParticipant.hpp>
+#include <fastdds/dds/publisher/Publisher.hpp>
+#include <fastdds/dds/publisher/DataWriter.hpp>
+#include <fastdds/dds/topic/Topic.hpp>
+#include <fastdds/dds/topic/TypeSupport.hpp>
+#include "ObstaclesPubSubTypes.hpp"
+
+using namespace eprosima::fastdds::dds;
 
 #include "utils.hpp"
 #include "pipes.hpp"
@@ -16,5 +31,10 @@
 // struct Obstacle;
 
 Obstacle make_obstacle(int lifetime, int x, int y);
-void addObstacle(int COLS, int LINES, Obstacle *obstacles, int *free_slots);
+void addObstacle(
+    int COLS,
+    int LINES,
+    std::vector<long> &obstacles_x,
+    std::vector<long> &obstacles_y,
+    std::vector<long> &obstacles_lifetime);
 void obstacles_component(int read_fd, int write_fd);
