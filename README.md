@@ -1,5 +1,13 @@
 # Drone simulator written in C++
 
+## Table of contents
+- [Description](#description)
+- [Architecture](#architecture)
+  - [Components](#components)
+  - [Project structure](#project-structure)
+- [How to run](#how-to-run)
+- [How to play](#how-to-play)
+
 ## Description
 This project is a 2D simulation of a drone interacting with its environment. The drone can be controlled by the user through their keyboard. The environment includes obstacles that should be avoided as well as targets that should be approached by the drone.
 
@@ -67,6 +75,17 @@ Files: `watchdog.(c|h)pp`
 
 Watches other components by periodically checking shared log file. Terminates program, if one component stops responding.
 
+### Project structure
+The project is structured as follows
+```
+- src/: Contains the source code files for the project.
+- include/: Contains the header files for the project.
+- build/: The directory where the project will be built. Gets created automatically.
+- appsettings.json: The configuration file for the project.
+- CMakeLists.txt: The CMake configuration file for building the project.
+- build.sh: A script for building the project.
+```
+Files irellevent for the project are omitted.
 
 ## How to run
 ### Using pre-built binary
@@ -111,3 +130,14 @@ In order to enable debugging symbols, run `cmake` with the corresponding flag.
 ```bash
 cmake -DCMAKE_BUILD_TYPE=Debug ..
 ```
+
+## How to play
+- Move the drone using
+  - `E`: Move up
+  - `C`: Move down
+  - `S`: Move left
+  - `F`: Move right
+  - `W`, `R`, `X`, `V`: Move diagonally
+  - `D`: Stop moving
+- Use `Q` to quit the game.
+- Avoid obstacles (`*`) and reach targets (`1`, `2`, `3`, ...).
