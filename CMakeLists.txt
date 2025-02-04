@@ -27,6 +27,7 @@ include_directories(include generated)
 set(SRCS
     src/drone.cpp
     src/watchdog.cpp
+    src/obstacles_dds.cpp
     src/obstacles.cpp
     src/targets.cpp
     src/blackboard.cpp

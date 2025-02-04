@@ -10,18 +10,9 @@
 #include <chrono>
 #include <thread>
 
-#include <fastdds/dds/domain/DomainParticipantFactory.hpp>
-#include <fastdds/dds/domain/DomainParticipant.hpp>
-#include <fastdds/dds/publisher/Publisher.hpp>
-#include <fastdds/dds/publisher/DataWriter.hpp>
-#include <fastdds/dds/topic/Topic.hpp>
-#include <fastdds/dds/topic/TypeSupport.hpp>
-#include "ObstaclesPubSubTypes.hpp"
-
-using namespace eprosima::fastdds::dds;
-
 #include "utils.hpp"
 #include "pipes.hpp"
+#include "obstacles_dds.hpp"
 
 // #define OBSTACLE_MAX_LIFETIME 50
 // #define OBSTACLE_START_COUNT 5

@@ -52,18 +52,13 @@ void obstacles_component(int read_fd, int write_fd)
     // Initialize FastDDS
     register_my_signal_handler();
 
-    DomainParticipantQos participantQos;
-    DomainParticipant *participant = DomainParticipantFactory::get_instance()->create_participant(0, participantQos);
-    TypeSupport type(new ObstaclesPubSubType());
-    type.register_type(participant);
     std::string topic_name = "obstacles";
     if (global_params.mode != 1)
     {
         topic_name += "_local";
     }
-    Topic *topic = participant->create_topic(topic_name, "Obstacles", TOPIC_QOS_DEFAULT);
-    Publisher *publisher = participant->create_publisher(PUBLISHER_QOS_DEFAULT, nullptr);
-    DataWriter *writer = publisher->create_datawriter(topic, DATAWRITER_QOS_DEFAULT, nullptr);
+    ObstaclePublisher *mypub = new ObstaclePublisher();
+    mypub->init();
 
     ssize_t bytes_size;
 
@@ -108,14 +103,12 @@ void obstacles_component(int read_fd, int write_fd)
         obstacles.obstacles_x(obstacles_x);
         obstacles.obstacles_y(obstacles_y);
         obstacles.obstacles_number(obstacles_x.size());
-        writer->write(&obstacles);
+        mypub->publish(&obstacles);
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1000)); // Time step
     }
 
     // Clean up
-    participant->delete_contained_entities();
-    DomainParticipantFactory::get_instance()->delete_participant(participant);
-    std::cout << "Successfully cleaned up obstacles component. Terminating now..." << std::endl;
+    delete mypub;
     exit(EXIT_SUCCESS);
 }

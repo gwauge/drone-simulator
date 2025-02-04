@@ -83,5 +83,7 @@ make -j${threads}
 
 # Run the project if -r option was set
 if [ "$run_after_build" = true ]; then
-    ./dronesim
+    echo "This feature is currently broken. Please run the project manually from inside the build directory."
+    exit 1
+    # ./dronesim
 fi
