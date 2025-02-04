@@ -27,6 +27,15 @@ void shutdown(int sig)
         wait(NULL);
     }
 
+    // close all pipes
+    for (int i = 0; i < NUM_COMPONENTS; i++)
+    {
+        close(processes[i].parent_to_child.read_fd);
+        close(processes[i].parent_to_child.write_fd);
+        close(processes[i].child_to_parent.read_fd);
+        close(processes[i].child_to_parent.write_fd);
+    }
+
     // Cleanup mutex
     cleanup_mutex();
 }

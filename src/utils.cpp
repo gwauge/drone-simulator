@@ -123,7 +123,17 @@ void signal_handler(int sig)
 
 void register_signal_handler()
 {
-    signal(SIGUSR1, signal_handler);
+    struct sigaction sa;
+    sigemptyset(&sa.sa_mask);
+    sigaddset(&sa.sa_mask, SIGUSR2); // Block SIGUSR2 signals
+    sa.sa_flags = 0;
+    sa.sa_handler = signal_handler;
+
+    if (sigaction(SIGUSR1, &sa, NULL) == -1)
+    {
+        perror("sigaction");
+        exit(EXIT_FAILURE);
+    }
 }
 
 void handle_select_error(int result)
