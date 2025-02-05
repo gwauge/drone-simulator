@@ -12,7 +12,7 @@
 
 #include "utils.hpp"
 #include "pipes.hpp"
-#include "obstacles_dds.hpp"
+#include "dds.hpp"
 
 // #define OBSTACLE_MAX_LIFETIME 50
 // #define OBSTACLE_START_COUNT 5

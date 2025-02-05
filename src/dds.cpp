@@ -3,13 +3,17 @@
  *
  */
 
-#include "obstacles_dds.hpp"
+#include "dds.hpp"
 
-// Publisher
-ObstaclePublisher::PubListener::PubListener() : matched_(0) {}
-ObstaclePublisher::PubListener::~PubListener() = default;
+// =========== Publisher ===========
+template <typename T, typename U>
+DDSPublisher<T, U>::PubListener::PubListener() : matched_(0) {}
 
-void ObstaclePublisher::PubListener::on_publication_matched(DataWriter * /*writer*/, const PublicationMatchedStatus &info)
+template <typename T, typename U>
+DDSPublisher<T, U>::PubListener::~PubListener() = default;
+
+template <typename T, typename U>
+void DDSPublisher<T, U>::PubListener::on_publication_matched(DataWriter * /*writer*/, const PublicationMatchedStatus &info)
 {
     if (info.current_count_change == 1)
     {
@@ -28,12 +32,16 @@ void ObstaclePublisher::PubListener::on_publication_matched(DataWriter * /*write
     }
 }
 
-ObstaclePublisher::ObstaclePublisher()
-    : participant_(nullptr), publisher_(nullptr), topic_(nullptr), writer_(nullptr), type_(new ObstaclesPubSubType())
+template <typename T, typename U>
+DDSPublisher<T, U>::DDSPublisher(const std::string &topic_name)
+    : topic_name_(topic_name), participant_(nullptr),
+      publisher_(nullptr), topic_(nullptr),
+      writer_(nullptr), type_(new U())
 {
 }
 
-ObstaclePublisher::~ObstaclePublisher()
+template <typename T, typename U>
+DDSPublisher<T, U>::~DDSPublisher()
 {
     if (writer_ != nullptr)
     {
@@ -50,7 +58,8 @@ ObstaclePublisher::~ObstaclePublisher()
     DomainParticipantFactory::get_instance()->delete_participant(participant_);
 }
 
-bool ObstaclePublisher::init()
+template <typename T, typename U>
+bool DDSPublisher<T, U>::init()
 {
     DomainParticipantQos participantQos;
     participantQos.name("Participant_publisher");
@@ -65,7 +74,7 @@ bool ObstaclePublisher::init()
     type_.register_type(participant_);
 
     // Create the publications Topic
-    topic_ = participant_->create_topic("obstacles_local", type_.get_type_name(), TOPIC_QOS_DEFAULT);
+    topic_ = participant_->create_topic(topic_name_, type_.get_type_name(), TOPIC_QOS_DEFAULT);
 
     if (topic_ == nullptr)
     {
@@ -90,30 +99,8 @@ bool ObstaclePublisher::init()
     return true;
 }
 
-//! Send a randomized publication
-bool ObstaclePublisher::publish_random()
-{
-    if (listener_.matched_ > 0)
-    {
-        int num = fRand(2, 5);
-        my_obstacles_.obstacles_number(num);
-        std::vector<int> x_vals(num);
-        std::vector<int> y_vals(num);
-
-        for (int i = 0; i < num; i++)
-        {
-            x_vals[i] = fRand(0, 100);
-            y_vals[i] = fRand(0, 100);
-        }
-        my_obstacles_.obstacles_x(x_vals);
-        my_obstacles_.obstacles_y(y_vals);
-        writer_->write(&my_obstacles_);
-        return true;
-    }
-    return false;
-}
-
-bool ObstaclePublisher::publish(Obstacles *msg)
+template <typename T, typename U>
+bool DDSPublisher<T, U>::publish(T *msg)
 {
     if (listener_.matched_ > 0)
     {
@@ -123,17 +110,25 @@ bool ObstaclePublisher::publish(Obstacles *msg)
     return false;
 }
 
-double ObstaclePublisher::fRand(double fMin, double fMax)
+double fRand(double fMin, double fMax)
 {
     double f = (double)rand() / RAND_MAX;
     return fMin + f * (fMax - fMin);
 }
 
-// Subscriber
-ObstacleSubscriber::SubListener::SubListener() : samples_(0) {}
-ObstacleSubscriber::SubListener::~SubListener() = default;
+// Explicit template instantiations
+template class DDSPublisher<Obstacles, ObstaclesPubSubType>;
+template class DDSPublisher<Targets, TargetsPubSubType>;
 
-void ObstacleSubscriber::SubListener::on_subscription_matched(
+// =========== Subscriber ===========
+template <typename DataType, typename PubSubType>
+DDSSubscriber<DataType, PubSubType>::SubListener::SubListener(std::function<void(const DataType &)> callback) : samples_(0), callback_(callback) {}
+
+template <typename DataType, typename PubSubType>
+DDSSubscriber<DataType, PubSubType>::SubListener::~SubListener() = default;
+
+template <typename DataType, typename PubSubType>
+void DDSSubscriber<DataType, PubSubType>::SubListener::on_subscription_matched(
     DataReader *,
     const SubscriptionMatchedStatus &info)
 {
@@ -152,32 +147,36 @@ void ObstacleSubscriber::SubListener::on_subscription_matched(
     }
 }
 
-void ObstacleSubscriber::SubListener::on_data_available(DataReader *reader)
+template <typename DataType, typename PubSubType>
+void DDSSubscriber<DataType, PubSubType>::SubListener::on_data_available(DataReader *reader)
 {
     SampleInfo info;
-    if (reader->take_next_sample(&my_obstacles_, &info) == eprosima::fastdds::dds::RETCODE_OK)
+    if (reader->take_next_sample(&data, &info) == eprosima::fastdds::dds::RETCODE_OK)
     {
         if (info.valid_data)
         {
             samples_++;
-            std::cout << "Obstacle received: " << my_obstacles_.obstacles_number() << std::endl;
-            for (int i = 0; i < my_obstacles_.obstacles_number(); i++)
+            if (callback_)
             {
-                std::cout << "\tObstacle " << i << ": ("
-                          << my_obstacles_.obstacles_x()[i] << ", "
-                          << my_obstacles_.obstacles_y()[i] << ")"
-                          << std::endl;
+                callback_(data);
             }
         }
     }
 }
 
-ObstacleSubscriber::ObstacleSubscriber()
-    : participant_(nullptr), subscriber_(nullptr), topic_(nullptr), reader_(nullptr), type_(new ObstaclesPubSubType())
+template <typename DataType, typename PubSubType>
+DDSSubscriber<DataType, PubSubType>::DDSSubscriber(
+    const std::string &topic_name,
+    std::function<void(const DataType &)> callback)
+    : topic_name_(topic_name), callback_(callback), listener_(callback),
+      participant_(nullptr),
+      subscriber_(nullptr), topic_(nullptr),
+      reader_(nullptr), type_(new PubSubType())
 {
 }
 
-ObstacleSubscriber::~ObstacleSubscriber()
+template <typename DataType, typename PubSubType>
+DDSSubscriber<DataType, PubSubType>::~DDSSubscriber()
 {
     if (reader_ != nullptr)
     {
@@ -194,7 +193,8 @@ ObstacleSubscriber::~ObstacleSubscriber()
     DomainParticipantFactory::get_instance()->delete_participant(participant_);
 }
 
-bool ObstacleSubscriber::init()
+template <typename DataType, typename PubSubType>
+bool DDSSubscriber<DataType, PubSubType>::init()
 {
     DomainParticipantQos participantQos;
     participantQos.name("Participant_subscriber");
@@ -209,7 +209,7 @@ bool ObstacleSubscriber::init()
     type_.register_type(participant_);
 
     // Create the subscriptions Topic
-    topic_ = participant_->create_topic("obstacles_local", type_.get_type_name(), TOPIC_QOS_DEFAULT);
+    topic_ = participant_->create_topic(topic_name_, type_.get_type_name(), TOPIC_QOS_DEFAULT);
 
     if (topic_ == nullptr)
     {
@@ -235,10 +235,15 @@ bool ObstacleSubscriber::init()
     return true;
 }
 
-void ObstacleSubscriber::run(uint32_t samples)
+template <typename DataType, typename PubSubType>
+void DDSSubscriber<DataType, PubSubType>::run(uint32_t samples)
 {
     while (listener_.samples_ < samples)
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
+
+// Explicit template instantiations
+template class DDSSubscriber<Obstacles, ObstaclesPubSubType>;
+template class DDSSubscriber<Targets, TargetsPubSubType>;
