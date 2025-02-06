@@ -18,6 +18,9 @@
 
 #include <cJSON.h>
 
+#include "ObstaclesPubSubTypes.hpp"
+#include "TargetsPubSubTypes.hpp"
+
 #define NUM_COMPONENTS 5
 #define OBSTACLES_MAX_NUMBER 256
 #define TARGETS_MAX_NUMBER 256
@@ -143,7 +146,8 @@ typedef struct
 {
     Input input;
     Drone drone;
-    Obstacle obstacles[OBSTACLES_MAX_NUMBER];
+    int obstacle_count = 0;
+    int target_count = 0;
     Target targets[TARGETS_MAX_NUMBER];
 } WorldState;
 

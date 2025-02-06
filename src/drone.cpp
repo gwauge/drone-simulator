@@ -17,11 +17,11 @@ void update_drone_position(Drone *drone, float fx, float fy)
 	drone->y += drone->vy * global_params.time_step;
 }
 
-float calculate_repulsive_force(Obstacle *obstacle, Drone *drone)
+float calculate_repulsive_force(int32_t obstacle_x, int32_t obstacle_y, Drone *drone)
 {
 	// Calculate distance to obstacle
-	float dx = drone->x - obstacle->x;
-	float dy = drone->y - obstacle->y;
+	float dx = drone->x - obstacle_x;
+	float dy = drone->y - obstacle_y;
 	float distance = sqrt(dx * dx + dy * dy);
 
 	// Apply repulsion only within a certain radius
@@ -31,6 +31,27 @@ float calculate_repulsive_force(Obstacle *obstacle, Drone *drone)
 		return force_magnitude;
 	}
 	return 0.0;
+}
+
+void receive_obstacles(int pipe_fd, Obstacles &obstacles, int size)
+{
+	obstacles.obstacles_number(size);
+	std::vector<int32_t> vecx = std::vector<int32_t>(size);
+	std::vector<int32_t> vecy = std::vector<int32_t>(size);
+
+	ssize_t bytes_size;
+
+	// read x values
+	bytes_size = read(pipe_fd, vecx.data(), size * sizeof(int32_t));
+	handle_pipe_read_error(bytes_size);
+
+	// read y values
+	bytes_size = read(pipe_fd, vecy.data(), size * sizeof(int32_t));
+	handle_pipe_read_error(bytes_size);
+
+	// update object
+	obstacles.obstacles_x(vecx);
+	obstacles.obstacles_y(vecy);
 }
 
 void drone_component(int read_fd, int write_fd)
@@ -52,6 +73,7 @@ void drone_component(int read_fd, int write_fd)
 
 	Drone drone = {10.0, 10.0, 0.0, 0.0}; // Initialize drone at origin with zero velocity
 	WorldState world_state;
+	Obstacles obstacles;
 	float force_x = 0.0, force_y = 0.0;
 
 	int received = 0;
@@ -85,6 +107,11 @@ void drone_component(int read_fd, int write_fd)
 				bytes_size = read(read_fd, &world_state, sizeof(world_state));
 				handle_pipe_read_error(bytes_size);
 
+				if (world_state.obstacle_count > 0)
+					receive_obstacles(read_fd, obstacles, world_state.obstacle_count);
+				if (global_params.debug)
+					std::cout << "[drone] Received " << obstacles.obstacles_number() << " obstacles" << std::endl;
+
 				received = 1;
 
 				// convert input into control forces
@@ -107,20 +134,20 @@ void drone_component(int read_fd, int write_fd)
 		}
 
 		// Update drone position based on control forces
-		for (int i = 0; i < global_params.num_obstacles; i++)
+		for (int i = 0; i < world_state.obstacle_count; i++)
 		{
-			Obstacle obstacle = world_state.obstacles[i];
-			if (obstacle.lifetime == OBSTACLE_UNSET)
-			{
-				continue;
-			}
+			int32_t obstacle_x = obstacles.obstacles_x().at(i);
+			int32_t obstacle_y = obstacles.obstacles_y().at(i);
 
 			// Calculate repulsive force from obstacle
-			float repulsion_force = calculate_repulsive_force(&obstacle, &drone);
+			float repulsion_force = calculate_repulsive_force(
+				obstacle_x,
+				obstacle_y,
+				&drone);
 
 			// Decompose repulsive force into x and y components
-			float dx = drone.x - obstacle.x;
-			float dy = drone.y - obstacle.y;
+			float dx = drone.x - obstacle_x;
+			float dy = drone.y - obstacle_y;
 			float distance = sqrt(dx * dx + dy * dy);
 			if (distance > 0)
 			{
@@ -141,7 +168,7 @@ void drone_component(int read_fd, int write_fd)
 			Obstacle obstacle = borders[i];
 
 			// Calculate repulsive force from obstacle
-			float repulsion_force = calculate_repulsive_force(&obstacle, &drone);
+			float repulsion_force = calculate_repulsive_force(obstacle.x, obstacle.y, &drone);
 
 			// Decompose repulsive force into x and y components
 			float dx = drone.x - obstacle.x;

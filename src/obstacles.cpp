@@ -57,7 +57,7 @@ void obstacles_component(int read_fd, int write_fd)
     {
         topic_name += "_local";
     }
-    DDSPublisher<Obstacles, ObstaclesPubSubType> *mypub = new DDSPublisher<Obstacles, ObstaclesPubSubType>("obstacles_local");
+    DDSPublisher<Obstacles, ObstaclesPubSubType> *mypub = new DDSPublisher<Obstacles, ObstaclesPubSubType>("obstacles");
     mypub->init();
 
     ssize_t bytes_size;

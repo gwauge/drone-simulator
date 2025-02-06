@@ -18,5 +18,6 @@
 
 Drone make_drone(float x, float y, float vx, float vy);
 void update_drone_position(Drone *drone, float fx, float fy);
-float calculate_repulsive_force(Obstacle *obstacles, Drone *drone);
+float calculate_repulsive_force(int32_t obstacle_x, int32_t obstacle_y, Drone *drone);
+void receive_obstacles(int pipe_fd, Obstacles &obstacles, int size);
 void drone_component(int read_fd, int write_fd);

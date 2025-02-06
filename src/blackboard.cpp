@@ -34,15 +34,12 @@ void draw_drone(WINDOW *win, Drone *drone)
 	wattroff(win, COLOR_PAIR(DRONE_PAIR));
 }
 
-void draw_obstacles(WINDOW *win, Obstacle *obstacles)
+void draw_obstacles(WINDOW *win, Obstacles &obstacles)
 {
 	wattron(win, COLOR_PAIR(OBSTACLE_PAIR));
-	for (int i = 0; i < global_params.num_obstacles; i++)
+	for (int i = 0; i < obstacles.obstacles_number(); i++)
 	{
-		if (obstacles[i].lifetime != OBSTACLE_UNSET)
-		{
-			mvwprintw(win, obstacles[i].y, obstacles[i].x, &global_params.obstacle_symbol);
-		}
+		mvwprintw(win, obstacles.obstacles_y().at(i), obstacles.obstacles_x().at(i), &global_params.obstacle_symbol);
 	}
 	wattroff(win, COLOR_PAIR(OBSTACLE_PAIR));
 }
@@ -61,12 +58,12 @@ void draw_targets(WINDOW *win, Target *targets)
 }
 
 // Function to display the obstacle and drone
-void display(WINDOW *win, WorldState *world_state)
+void display(WINDOW *win, WorldState *world_state, Obstacles &obstacles, Targets &targets)
 {
 	wclear(win);
-	draw_drone(win, &world_state->drone);		 // Display drone
-	draw_obstacles(win, world_state->obstacles); // Display obstacles
-	draw_targets(win, world_state->targets);	 // Display targets
+	draw_drone(win, &world_state->drone);	 // Display drone
+	draw_obstacles(win, obstacles);			 // Display obstacles
+	draw_targets(win, world_state->targets); // Display targets
 	wrefresh(win);
 }
 
@@ -193,11 +190,27 @@ void blackboard(
 
 	Drone old_drone;
 	WorldState world_state;
+	Obstacles obstacles;
+	Targets targets;
 	reset_input(&world_state.input);
 
 	send_map_size(drone_process, main_win_height, main_win_width);
 	send_map_size(obstacle_process, main_win_height, main_win_width);
 	send_map_size(targets_process, main_win_height, main_win_width);
+
+	// initialize DDS subscribers
+	DDSSubscriber<Obstacles, ObstaclesPubSubType> *obstacle_sub = new DDSSubscriber<Obstacles, ObstaclesPubSubType>(
+		"obstacles",
+		[&world_state, &obstacles](const Obstacles &msg)
+		{
+			world_state.obstacle_count = msg.obstacles_number();
+			obstacles = msg;
+		});
+	if (!obstacle_sub->init())
+	{
+		std::cerr << "Failed to initialize obstacle subscriber" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 
 	int counter = 0;
 	int collision_counter = 0;
@@ -220,6 +233,19 @@ void blackboard(
 		handle_pipe_write_error(bytes_size);
 
 		reset_input(&world_state.input);
+
+		// send obstacles and targets to drone process
+		if (world_state.obstacle_count > 0)
+		{
+			bytes_size = write(drone_process->parent_to_child.write_fd,
+							   obstacles.obstacles_x().data(),
+							   obstacles.obstacles_number() * sizeof(int32_t));
+			handle_pipe_write_error(bytes_size);
+			bytes_size = write(drone_process->parent_to_child.write_fd,
+							   obstacles.obstacles_y().data(),
+							   obstacles.obstacles_number() * sizeof(int32_t));
+			handle_pipe_write_error(bytes_size);
+		}
 
 		timeout.tv_sec = 0;
 		timeout.tv_usec = 10000; // 10ms
@@ -299,14 +325,6 @@ void blackboard(
 
 					if (global_params.debug)
 						printf("[watchdog] active: %d\n", active);
-				}
-				else if (fd == obstacle_process->child_to_parent.read_fd)
-				{
-					bytes_size = read(fd, &world_state.obstacles, sizeof(Obstacle) * global_params.num_obstacles);
-					handle_pipe_read_error(bytes_size);
-
-					if (global_params.debug)
-						printf("[obstacles] updated\n");
 				}
 				else if (fd == targets_process->child_to_parent.read_fd)
 				{
@@ -391,9 +409,10 @@ void blackboard(
 					world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
 			double score = compute_score(counter, collision_counter, 0, distance_traveled);
 			wprintw(inspection_win, "Score: %.2f\n", score);
+			wprintw(inspection_win, "Obstacle count: %d\n", world_state.obstacle_count);
 			wrefresh(inspection_win);
 
-			display(main_win, &world_state);
+			display(main_win, &world_state, obstacles, targets);
 		}
 
 		// Rotate file descriptors to ensure fairness
@@ -406,4 +425,6 @@ void blackboard(
 		delwin(inspection_win);
 		endwin(); // Close ncurses mode
 	}
+
+	delete obstacle_sub;
 }
