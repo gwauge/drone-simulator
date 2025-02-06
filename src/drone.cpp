@@ -109,8 +109,6 @@ void drone_component(int read_fd, int write_fd)
 
 				if (world_state.obstacle_count > 0)
 					receive_obstacles(read_fd, obstacles, world_state.obstacle_count);
-				if (global_params.debug)
-					std::cout << "[drone] Received " << obstacles.obstacles_number() << " obstacles" << std::endl;
 
 				received = 1;
 

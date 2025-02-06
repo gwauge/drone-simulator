@@ -16,7 +16,7 @@ void init_colors();
 void init_ncruses();
 void draw_drone(WINDOW *win, Drone *drone);
 void draw_obstacles(WINDOW *win, Obstacles &obstacles);
-void draw_targets(WINDOW *win, Target *targets);
+void draw_targets(WINDOW *win, Targets &targets);
 void display(WINDOW *win, WorldState *world_state, Obstacles &obstacles, Targets &targets);
 void reset_input(Input *input);
 void send_map_size(Process *process, int LINES, int COLS);

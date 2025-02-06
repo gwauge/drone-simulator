@@ -44,15 +44,12 @@ void draw_obstacles(WINDOW *win, Obstacles &obstacles)
 	wattroff(win, COLOR_PAIR(OBSTACLE_PAIR));
 }
 
-void draw_targets(WINDOW *win, Target *targets)
+void draw_targets(WINDOW *win, Targets &targets)
 {
 	wattron(win, COLOR_PAIR(TARGET_PAIR));
-	for (int i = 0; i < global_params.num_targets; i++)
+	for (int i = 0; i < targets.targets_number(); i++)
 	{
-		if (targets[i].number != TARGET_UNSET)
-		{
-			mvwprintw(win, targets[i].y, targets[i].x, "%d", targets[i].number);
-		}
+		mvwprintw(win, targets.targets_y().at(i), targets.targets_x().at(i), "%c", '0' + i + 1);
 	}
 	wattroff(win, COLOR_PAIR(TARGET_PAIR));
 }
@@ -61,9 +58,9 @@ void draw_targets(WINDOW *win, Target *targets)
 void display(WINDOW *win, WorldState *world_state, Obstacles &obstacles, Targets &targets)
 {
 	wclear(win);
-	draw_drone(win, &world_state->drone);	 // Display drone
-	draw_obstacles(win, obstacles);			 // Display obstacles
-	draw_targets(win, world_state->targets); // Display targets
+	draw_drone(win, &world_state->drone); // Display drone
+	draw_obstacles(win, obstacles);		  // Display obstacles
+	draw_targets(win, targets);			  // Display targets
 	wrefresh(win);
 }
 
@@ -106,7 +103,6 @@ double compute_score(
 	score += obstacles_weight * obstacles_encountered;
 	score += distance_weight * distance_traveled;
 
-	// Add penalties if any (example: if obstacles_encountered > 5, apply a penalty)
 	if (obstacles_encountered > 5)
 	{
 		score += penalty_weight;
@@ -211,6 +207,20 @@ void blackboard(
 		std::cerr << "Failed to initialize obstacle subscriber" << std::endl;
 		exit(EXIT_FAILURE);
 	}
+	DDSSubscriber<Targets, TargetsPubSubType> *targets_sub = new DDSSubscriber<Targets, TargetsPubSubType>(
+		"targets",
+		[&world_state, &targets](const Targets &msg)
+		{
+			if (global_params.debug)
+				std::cout << "[blackboard] Received " << targets.targets_number() << " targets" << std::endl;
+			world_state.target_count = msg.targets_number();
+			targets = msg;
+		});
+	if (!targets_sub->init())
+	{
+		std::cerr << "Failed to initialize targets subscriber" << std::endl;
+		exit(EXIT_FAILURE);
+	}
 
 	int counter = 0;
 	int collision_counter = 0;
@@ -234,7 +244,7 @@ void blackboard(
 
 		reset_input(&world_state.input);
 
-		// send obstacles and targets to drone process
+		// send obstacles to drone process
 		if (world_state.obstacle_count > 0)
 		{
 			bytes_size = write(drone_process->parent_to_child.write_fd,
@@ -285,18 +295,15 @@ void blackboard(
 
 					// check for target collisions
 					int collision_idx = -1;
-					for (int i = 0; i < global_params.num_targets; i++)
+					for (int i = 0; i < targets.targets_number(); i++)
 					{
-						if (world_state.targets[i].number != TARGET_UNSET)
+						if (
+							(int)world_state.drone.x == targets.targets_x().at(i) &&
+							(int)world_state.drone.y == targets.targets_y().at(i))
 						{
-							if (
-								(int)world_state.drone.x == world_state.targets[i].x &&
-								(int)world_state.drone.y == world_state.targets[i].y)
-							{
-								collision_idx = i;
-								collision_counter++;
-								break;
-							}
+							collision_idx = i;
+							collision_counter++;
+							break;
 						}
 					}
 
@@ -325,14 +332,6 @@ void blackboard(
 
 					if (global_params.debug)
 						printf("[watchdog] active: %d\n", active);
-				}
-				else if (fd == targets_process->child_to_parent.read_fd)
-				{
-					bytes_size = read(fd, &world_state.targets, sizeof(Target) * global_params.num_targets);
-					handle_pipe_read_error(bytes_size);
-
-					if (global_params.debug)
-						printf("[targets] updated\n");
 				}
 				else if (fd == keyboard_process->child_to_parent.read_fd)
 				{
@@ -409,7 +408,7 @@ void blackboard(
 					world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
 			double score = compute_score(counter, collision_counter, 0, distance_traveled);
 			wprintw(inspection_win, "Score: %.2f\n", score);
-			wprintw(inspection_win, "Obstacle count: %d\n", world_state.obstacle_count);
+			wprintw(inspection_win, "Obstacles %d | Targets: %d\n", world_state.obstacle_count, world_state.target_count);
 			wrefresh(inspection_win);
 
 			display(main_win, &world_state, obstacles, targets);
@@ -427,4 +426,5 @@ void blackboard(
 	}
 
 	delete obstacle_sub;
+	delete targets_sub;
 }
