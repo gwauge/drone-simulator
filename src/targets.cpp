@@ -38,7 +38,7 @@ void targets_component(int read_fd, int write_fd)
     sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL);
 
-    std::string topic_name = "targets";
+    std::string topic_name = TARGETS_TOPIC_NAME;
     if (global_params.mode == 1)
     {
         topic_name += "_local";

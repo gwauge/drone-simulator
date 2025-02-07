@@ -52,7 +52,7 @@ void obstacles_component(int read_fd, int write_fd)
     // Initialize FastDDS
     register_my_signal_handler();
 
-    std::string topic_name = "obstacles";
+    std::string topic_name = OBSTACLE_TOPIC_NAME;
     if (global_params.mode == 1)
     {
         topic_name += "_local";

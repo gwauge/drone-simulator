@@ -10,6 +10,8 @@
 #include "pipes.hpp"
 #include "dds.hpp"
 
+#define TARGETS_TOPIC_NAME "targets"
+
 Target make_target(int number, int x, int y);
 void addTarget(int COLS, int LINES, std::vector<int32_t> &targets_x, std::vector<int32_t> &targets_y);
 void targets_component(int read_fd, int write_fd);

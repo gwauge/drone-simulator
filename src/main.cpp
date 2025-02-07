@@ -71,6 +71,11 @@ int main(int argc, char *argv[])
         }
     }
 
+    if (global_params.debug)
+    {
+        printf("Runnin in mode: %d\n", global_params.mode);
+    }
+
     size_t bytes_size;
 
     // Initialize mutex

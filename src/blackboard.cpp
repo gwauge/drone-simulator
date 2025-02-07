@@ -195,8 +195,15 @@ void blackboard(
 	send_map_size(targets_process, main_win_height, main_win_width);
 
 	// initialize DDS subscribers
+	std::string obstacles_topic_name = OBSTACLE_TOPIC_NAME;
+	std::string targets_topic_name = TARGETS_TOPIC_NAME;
+	if (global_params.mode == 2)
+	{
+		obstacles_topic_name += "_local";
+		targets_topic_name += "_local";
+	}
 	DDSSubscriber<Obstacles, ObstaclesPubSubType> *obstacle_sub = new DDSSubscriber<Obstacles, ObstaclesPubSubType>(
-		"obstacles",
+		obstacles_topic_name,
 		[&world_state, &obstacles](const Obstacles &msg)
 		{
 			world_state.obstacle_count = msg.obstacles_number();
@@ -208,7 +215,7 @@ void blackboard(
 		exit(EXIT_FAILURE);
 	}
 	DDSSubscriber<Targets, TargetsPubSubType> *targets_sub = new DDSSubscriber<Targets, TargetsPubSubType>(
-		"targets",
+		targets_topic_name,
 		[&world_state, &targets](const Targets &msg)
 		{
 			if (global_params.debug)
