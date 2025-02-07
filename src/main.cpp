@@ -44,6 +44,12 @@ int main(int argc, char *argv[])
 {
     printf("Starting main process with PID %d\n", getpid());
 
+    if (parse_parameters() != 0)
+    {
+        shutdown(0);
+        exit(EXIT_FAILURE);
+    }
+
     std::string mode = "normal";
 
     if (argc > 1)
@@ -51,24 +57,18 @@ int main(int argc, char *argv[])
         if (strcmp(argv[1], "server") == 0)
         {
             mode = "server";
+            global_params.mode = 2;
         }
         else if (strcmp(argv[1], "client") == 0)
         {
             mode = "client";
+            global_params.mode = 1;
         }
         else
         {
             std::cerr << "Invalid mode. Use 'server' or 'client'." << std::endl;
             exit(EXIT_FAILURE);
         }
-    }
-
-    printf("Running in %s mode\n", mode.c_str());
-
-    if (parse_parameters() != 0)
-    {
-        shutdown(0);
-        exit(EXIT_FAILURE);
     }
 
     size_t bytes_size;

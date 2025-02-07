@@ -53,16 +53,16 @@ void obstacles_component(int read_fd, int write_fd)
     register_my_signal_handler();
 
     std::string topic_name = "obstacles";
-    if (global_params.mode != 1)
+    if (global_params.mode == 1)
     {
         topic_name += "_local";
     }
-    DDSPublisher<Obstacles, ObstaclesPubSubType> *mypub = new DDSPublisher<Obstacles, ObstaclesPubSubType>("obstacles");
+    DDSPublisher<Obstacles, ObstaclesPubSubType> *mypub = new DDSPublisher<Obstacles, ObstaclesPubSubType>(topic_name);
     mypub->init();
 
     ssize_t bytes_size;
 
-    // Get terminal sizeÄ
+    // Get terminal size
     int COLS, LINES;
     bytes_size = read(read_fd, &COLS, sizeof(int));
     handle_pipe_read_error(bytes_size);

@@ -408,7 +408,7 @@ void blackboard(
 					world_state.drone.x, world_state.drone.y, world_state.drone.vx, world_state.drone.vy);
 			double score = compute_score(counter, collision_counter, 0, distance_traveled);
 			wprintw(inspection_win, "Score: %.2f\n", score);
-			wprintw(inspection_win, "Obstacles %d | Targets: %d\n", world_state.obstacle_count, world_state.target_count);
+			wprintw(inspection_win, "Obstacles: %d | Targets: %d\n", world_state.obstacle_count, world_state.target_count);
 			wrefresh(inspection_win);
 
 			display(main_win, &world_state, obstacles, targets);

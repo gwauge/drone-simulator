@@ -38,7 +38,12 @@ void targets_component(int read_fd, int write_fd)
     sa.sa_flags = 0;
     sigaction(SIGINT, &sa, NULL);
 
-    DDSPublisher<Targets, TargetsPubSubType> *mypub = new DDSPublisher<Targets, TargetsPubSubType>("targets");
+    std::string topic_name = "targets";
+    if (global_params.mode == 1)
+    {
+        topic_name += "_local";
+    }
+    DDSPublisher<Targets, TargetsPubSubType> *mypub = new DDSPublisher<Targets, TargetsPubSubType>(topic_name);
     mypub->init();
 
     fd_set readfds;
@@ -76,6 +81,7 @@ void targets_component(int read_fd, int write_fd)
     Drone drone;
 
     int collision_idx;
+    int collision_idx_old = -1;
     while (targets_running)
     {
         FD_ZERO(&readfds);
@@ -96,7 +102,7 @@ void targets_component(int read_fd, int write_fd)
                 bytes_size = read(read_fd, &collision_idx, sizeof(int));
                 handle_pipe_read_error(bytes_size);
 
-                if (collision_idx >= 0 && collision_idx < targets_x.size())
+                if (collision_idx >= 0 && collision_idx < targets_x.size() && collision_idx != collision_idx_old)
                 {
                     if (global_params.debug)
                     {
@@ -109,6 +115,9 @@ void targets_component(int read_fd, int write_fd)
 
                     // Send targets to blackboard
                     send_update = true;
+
+                    // avoid multiple collisions with the same target
+                    collision_idx_old = collision_idx;
                 }
             }
         }
