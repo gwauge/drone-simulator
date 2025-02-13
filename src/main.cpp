@@ -50,18 +50,14 @@ int main(int argc, char *argv[])
         exit(EXIT_FAILURE);
     }
 
-    std::string mode = "normal";
-
     if (argc > 1)
     {
         if (strcmp(argv[1], "server") == 0)
         {
-            mode = "server";
             global_params.mode = 2;
         }
         else if (strcmp(argv[1], "client") == 0)
         {
-            mode = "client";
             global_params.mode = 1;
         }
         else

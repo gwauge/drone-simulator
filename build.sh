@@ -15,7 +15,7 @@ show_help() {
     echo "  -j <threads>  Number of threads for parallel building. Directly passed to cmake/make. Defaults to 8."
     echo "  -r            Run the project after build step. Defaults to false."
     echo "  -h            Show this help message."
-    echo "  -g            Regenerate fastdds types."
+    echo "  -g            Generate fastdds types. Defaults to false unless there is no \`generated\` directory."
     echo "  -c            Clean the build directory."
 }
 
@@ -51,7 +51,7 @@ while getopts "j:rhgc" opt; do
     esac
 done
 
-if [ "$gen_types" = true ]; then
+if [ "$gen_types" = true ] || [ ! -d "generated" ]; then
     # Check if fastddsgen is installed
     if ! command -v fastddsgen &> /dev/null; then
         echo "fastddsgen is not installed. Please install it before running this script."

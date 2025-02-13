@@ -111,6 +111,8 @@ chmod +x drone-simulator_linux_amd64
 ##### Options:
 - `-j {THREADS}`: Number of threads for parallel building. Directly passed to cmake/make. Defaults to 8.
 - `-r`: Run the project after build step. Defaults to false.
+- `-g`: Generate fastdds types. Defaults to false unless there is no `generated` directory.
+- `-c`: Clean the build directory. Defaults to false.
 - `-h`: Show help message.
 
 #### Building manually
@@ -143,3 +145,10 @@ cmake -DCMAKE_BUILD_TYPE=Debug ..
 - Use `Q` to quit the game.
 - Avoid obstacles (`*`) and reach targets (`1`, `2`, `3`, ...).
 
+### Modes
+The simulator can either be run as a standalone application (`MODE = 0`) or as a distributed application. In the latter case, it will act either as a server, which generates obstacles and targets and publishes them through DDS (`MODE = 2`), or as a client, which receives the obstacles and targets (`MODE = 1`). When running the simulator, use the first argument to specify the mode:
+- `./dronesim client`: Run the simulator as a client.
+- `./dronesim server`: Run the simulator as a server.
+- `./dronesim`: Run the simulator as a standalone application.
+
+The mode can also be configured in the `appsettings.json` file. However, setting the mode through the command line argument will override the configuration file.
